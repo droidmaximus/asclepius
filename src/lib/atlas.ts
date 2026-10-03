@@ -148,7 +148,7 @@ export const MAX_NODES = 60;
 export const EXPAND_LIMIT = 12;
 const tierRank: Record<string, number> = { high: 0, medium: 1, low: 2 };
 const strongestFirst = (x: AtlasEdge, y: AtlasEdge) =>
-  (tierRank[x.tier ?? "low"] - tierRank[y.tier ?? "low"]) || ((y.confidence ?? 0) - (x.confidence ?? 0));
+  ((tierRank[x.tier ?? "low"] ?? 2) - (tierRank[y.tier ?? "low"] ?? 2)) || ((y.confidence ?? 0) - (x.confidence ?? 0));
 
 async function edgesOf(id: string): Promise<AtlasEdge[]> {
   const [a, b] = await Promise.all([

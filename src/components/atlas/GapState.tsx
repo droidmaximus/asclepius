@@ -1,6 +1,6 @@
 import type { Actions } from "@/lib/atlas";
 
-export function GapState({ actions, missing }: { actions?: Actions; missing?: string }) {
+export function GapState({ actions, missing }: { actions?: Actions | undefined; missing?: string | undefined }) {
   const sources = actions?.coverage?.sources_searched ?? [];
   return (
     <div className="rounded-md border bg-muted/50 p-4 text-sm">

@@ -13,7 +13,7 @@ export function Search({
 }: {
   onPick: (id: string) => void;
   size?: "md" | "lg";
-  value?: string;
+  value?: string | undefined;
   autoFocus?: boolean;
 }) {
   const [q, setQ] = useState("");

@@ -53,7 +53,7 @@ function NextStep() {
   const tierOf = new Map((edgesQ.data ?? []).map((e) => [e.id, e.tier]));
   const lowest = (s: Step): Tier | null => {
     const ts = (s.edge_ids ?? []).map((id) => tierOf.get(id)).filter(Boolean) as Tier[];
-    return ts.length ? ts.reduce((m, t) => (rank[t] < rank[m] ? t : m)) : null;
+    return ts.length ? ts.reduce((m, t) => ((rank[t] ?? 0) < (rank[m] ?? 0) ? t : m)) : null;
   };
   const researchers = metaQ.data?.shared_researchers ?? [];
   const resDiseaseIds = [...new Set(researchers.flatMap((r) => r.diseases))];
@@ -133,7 +133,7 @@ function NextStep() {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">{r.diseases.map((d) => dl.get(d) ?? d).join(", ")}</p>
-                        {r.edge_ids[0] && <button onClick={() => openEdge(r.edge_ids[0])} className="text-xs text-primary hover:underline">Show the evidence</button>}
+                        {r.edge_ids[0] && <button onClick={() => openEdge(r.edge_ids[0]!)} className="text-xs text-primary hover:underline">Show the evidence</button>}
                       </li>
                     ))}
                   </ul>

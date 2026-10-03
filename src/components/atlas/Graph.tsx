@@ -29,7 +29,7 @@ export function Graph({
   nodes: AtlasNode[];
   edges: AtlasEdge[];
   level: Record<string, number>;
-  selectedEdgeId?: string | null;
+  selectedEdgeId?: string | null | undefined;
   onTapNode: (id: string) => void;
   onSelectEdge: (id: string) => void;
 }) {
