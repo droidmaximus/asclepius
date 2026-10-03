@@ -70,7 +70,18 @@ export interface SharedResearcher {
   edge_ids: string[];
   ambiguous: boolean;
 }
+export interface Pair {
+  a: string; b: string; score: number; kind?: string;
+  shared_genes: string[]; shared_terms: string[]; shared_mechanisms: string[]; subtype_pair: boolean;
+}
+export interface Analysis {
+  pairs: Pair[];
+  counterexamples: Pair[];
+  term_labels: Record<string, string>;
+  threshold?: number;
+}
 export interface Meta {
+  analysis?: Analysis;
   anchor?: string;
   retrieved_at?: string;
   trials_scanned?: number;
@@ -134,49 +145,90 @@ export async function fetchNodes(ids: string[]): Promise<AtlasNode[]> {
 }
 
 export const MAX_NODES = 60;
+export const EXPAND_LIMIT = 12;
 const tierRank: Record<string, number> = { high: 0, medium: 1, low: 2 };
+const strongestFirst = (x: AtlasEdge, y: AtlasEdge) =>
+  (tierRank[x.tier ?? "low"] - tierRank[y.tier ?? "low"]) || ((y.confidence ?? 0) - (x.confidence ?? 0));
 
-export async function fetchNeighborhood(id: string) {
-  const [center] = await fetchNodes([id]);
-  if (!center) return null;
+async function edgesOf(id: string): Promise<AtlasEdge[]> {
   const [a, b] = await Promise.all([
-    db.from("edges").select("*").eq("source_id", id).limit(500),
-    db.from("edges").select("*").eq("target_id", id).limit(500),
+    db.from("edges").select("*").eq("source_id", id).limit(1000),
+    db.from("edges").select("*").eq("target_id", id).limit(1000),
   ]);
   if (a.error) throw a.error;
   if (b.error) throw b.error;
-  const all = [...(a.data as AtlasEdge[]), ...(b.data as AtlasEdge[])];
-  // Group by edge type to keep variety, then strongest first.
-  all.sort((x, y) => (tierRank[x.tier ?? "low"] - tierRank[y.tier ?? "low"]) || ((y.confidence ?? 0) - (x.confidence ?? 0)));
-  const byType = new Map<string, AtlasEdge[]>();
-  for (const e of all) {
-    const list = byType.get(e.type) ?? [];
-    list.push(e);
-    byType.set(e.type, list);
-  }
+  return [...(a.data as AtlasEdge[]), ...(b.data as AtlasEdge[])];
+}
+
+export interface GraphData {
+  nodes: AtlasNode[];
+  edges: AtlasEdge[];
+  level: Record<string, number>; // 0 centre, 1 family/direct, 2+ expanded
+  hiddenWeak: number;
+  hiddenOver: number;
+}
+
+/** Level 1: direct edges plus disease family (subtype_of upward). */
+export async function fetchNeighborhood(id: string, showWeak: boolean): Promise<(GraphData & { center: AtlasNode; totalEdges: number }) | null> {
+  const [center] = await fetchNodes([id]);
+  if (!center) return null;
+  const direct = await edgesOf(id);
+  const level: Record<string, number> = { [id]: 0 };
   const picked: AtlasEdge[] = [];
-  const neighborIds = new Set<string>();
-  let added = true;
-  while (neighborIds.size < MAX_NODES - 1 && added) {
-    added = false;
-    for (const list of byType.values()) {
-      const e = list.shift();
-      if (!e) continue;
-      added = true;
-      const other = e.source_id === id ? e.target_id : e.source_id;
-      if (!neighborIds.has(other) && neighborIds.size >= MAX_NODES - 1) continue;
-      neighborIds.add(other);
-      picked.push(e);
+  // family upward
+  let frontier = [id];
+  const seen = new Set([id]);
+  for (let depth = 0; depth < 4 && frontier.length; depth++) {
+    const { data, error } = await db.from("edges").select("*").eq("type", "subtype_of").in("source_id", frontier);
+    if (error) throw error;
+    frontier = [];
+    for (const e of data as AtlasEdge[]) {
+      if (!picked.some((p) => p.id === e.id)) picked.push(e);
+      if (!seen.has(e.target_id)) { seen.add(e.target_id); frontier.push(e.target_id); level[e.target_id] = 1; }
     }
   }
-  const nodes = await fetchNodes([...neighborIds]);
+  const visible = direct.filter((e) => showWeak || e.tier !== "low").sort(strongestFirst);
+  const hiddenWeak = showWeak ? 0 : direct.length - visible.length;
+  let hiddenOver = 0;
+  for (const e of visible) {
+    if (picked.some((p) => p.id === e.id)) continue;
+    const other = e.source_id === id ? e.target_id : e.source_id;
+    if (!(other in level) && Object.keys(level).length >= MAX_NODES) { hiddenOver++; continue; }
+    level[other] ??= 1;
+    picked.push(e);
+  }
+  const nodes = await fetchNodes(Object.keys(level));
   const known = new Set(nodes.map((n) => n.id));
   return {
     center,
-    nodes: [center, ...nodes],
-    edges: picked.filter((e) => known.has(e.source_id === id ? e.target_id : e.source_id)),
-    totalEdges: all.length,
+    nodes,
+    edges: picked.filter((e) => known.has(e.source_id) && known.has(e.target_id)),
+    level,
+    hiddenWeak,
+    hiddenOver,
+    totalEdges: direct.length,
   };
+}
+
+/** Add up to 12 strongest new neighbours of a node to an existing graph. */
+export async function expandNode(g: GraphData, id: string, showWeak: boolean): Promise<GraphData & { added: number }> {
+  const have = new Set(g.edges.map((e) => e.id));
+  const cand = (await edgesOf(id)).filter((e) => !have.has(e.id) && (showWeak || e.tier !== "low")).sort(strongestFirst);
+  const level = { ...g.level };
+  const newEdges: AtlasEdge[] = [];
+  const newIds: string[] = [];
+  for (const e of cand) {
+    if (newEdges.length >= EXPAND_LIMIT) break;
+    const other = e.source_id === id ? e.target_id : e.source_id;
+    if (!(other in level)) {
+      if (Object.keys(level).length >= MAX_NODES) continue;
+      level[other] = (level[id] ?? 1) + 1;
+      newIds.push(other);
+    }
+    newEdges.push(e);
+  }
+  const nodes = await fetchNodes(newIds);
+  return { ...g, nodes: [...g.nodes, ...nodes], edges: [...g.edges, ...newEdges], level, added: newEdges.length };
 }
 
 export async function fetchEdgesByIds(ids: string[]): Promise<AtlasEdge[]> {
@@ -184,6 +236,15 @@ export async function fetchEdgesByIds(ids: string[]): Promise<AtlasEdge[]> {
   const { data, error } = await db.from("edges").select("*").in("id", ids);
   if (error) throw error;
   return data as AtlasEdge[];
+}
+
+export async function fetchEvidenceForEdge(edgeId: string, extraIds: string[]): Promise<Evidence[]> {
+  const a = await db.from("evidence").select("*").eq("edge_id", edgeId);
+  if (a.error) throw a.error;
+  const rows = a.data as Evidence[];
+  const missing = extraIds.filter((i) => !rows.some((r) => r.id === i));
+  if (missing.length) rows.push(...(await fetchEvidence(missing)));
+  return rows;
 }
 
 export async function fetchEvidence(ids: string[]): Promise<Evidence[]> {
@@ -207,6 +268,12 @@ export const TYPE_LABEL: Record<string, string> = {
   Paper: "Published paper",
 };
 
+export const MECH_LABEL: Record<string, string> = {
+  "mech:glycosphingolipid-catabolism": "Lysosomal glycosphingolipid catabolism",
+  "mech:lysosomal-lipid-transport": "Lysosomal lipid transport",
+  "mech:lysosome-organization": "Lysosome organization and function",
+};
+
 export const REL_LABEL: Record<string, string> = {
   about: "is about",
   associated_with: "is linked to",
@@ -222,6 +289,7 @@ export const REL_LABEL: Record<string, string> = {
   studies: "studies",
   subtype_of: "is a form of",
   treats: "is being tested for",
+  shares_mechanism_with: "shares a body process with",
 };
 
 export const TIER_LABEL: Record<string, string> = {
@@ -230,9 +298,9 @@ export const TIER_LABEL: Record<string, string> = {
   low: "Weak support",
 };
 export const EVTYPE_LABEL: Record<string, string> = {
-  observed: "Taken directly from a database",
-  extracted: "Read from a published sentence",
-  inferred: "Worked out by the tool (not proven)",
+  observed: "Observed: from a curated database",
+  extracted: "Extracted: read from a paper by AI, with the quote",
+  inferred: "Inferred: our own scoring, not proven",
 };
 export const SOURCE_LABEL: Record<string, string> = {
   pubmed: "PubMed",
