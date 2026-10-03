@@ -238,7 +238,7 @@ function StepCard({ step: s, tier, onEvidence }: { step: Step; tier: Tier | null
           {cites.length > 0 && (
             <div className="text-xs text-muted-foreground">
               Citations:{" "}
-              {cites.map((c) => <button key={c} onClick={() => onEvidence(c)} className="mr-2 text-primary hover:underline">{c}</button>)}
+              {cites.map((c, i) => <button key={c} onClick={() => onEvidence(c)} className="mr-3 text-primary hover:underline">Source {i + 1}</button>)}
             </div>
           )}
           <p className="text-xs text-muted-foreground">Check every claim before sending. This draft is not medical advice.</p>
