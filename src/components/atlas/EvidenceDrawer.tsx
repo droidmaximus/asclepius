@@ -80,7 +80,7 @@ export function EvidenceDrawer({
               <dd>{d.edge.retrieved_at}</dd>
               <dt className="text-muted-foreground">Evidence type</dt>
               <dd className="flex items-center gap-2"><EvBadge ev={d.edge.evidence_type} />{EVTYPE_LABEL[d.edge.evidence_type ?? "observed"]}</dd>
-              {typeof d.edge.props?.["reason"] === "string" && (
+              {typeof d.edge.props?.["reason"] === "string" && !!d.edge.props["reason"] && (
                 <>
                   <dt className="text-muted-foreground">Note</dt>
                   <dd>{d.edge.props["reason"] as string}</dd>

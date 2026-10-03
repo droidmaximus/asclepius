@@ -115,7 +115,7 @@ export function Graph({
           animate: false,
         } as never,
         minZoom: 0.3,
-        maxZoom: 2.5,
+        maxZoom: 1.4,
         wheelSensitivity: 0.2,
       });
       cy.on("tap", "node", (ev) => handlers.current.onTapNode(ev.target.id()));

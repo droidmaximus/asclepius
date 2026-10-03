@@ -8,3 +8,9 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+## Rare Disease Atlas
+- App is read-only against Supabase tables nodes/edges/evidence/meta via the browser client; never add tables or writes — data comes from an external pipeline.
+- Data-driven routes (/explore, /next-step) use ssr:false because Cytoscape and on-demand queries are browser-only.
+- Graph colours come from CSS tokens resolved to rgb at runtime (Cytoscape cannot parse oklch); keep colours in src/styles.css.
+- Graph never exceeds 60 nodes (MAX_NODES); expansions add at most 12 links per click.
