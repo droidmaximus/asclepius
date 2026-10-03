@@ -86,11 +86,15 @@ async function run(stepId: string, systemPrompt: string, withQuotes: boolean): P
   try {
     parsed = JSON.parse(raw.replace(/^```(json)?|```$/g, "").trim());
   } catch {
+    console.warn("ai output not json", { stepId, raw: raw.slice(0, 500) });
     return fallback();
   }
   const text = typeof parsed.text === "string" ? parsed.text.trim() : "";
   const cited = Array.isArray(parsed.cited_edge_ids) ? parsed.cited_edge_ids.filter((x): x is string => typeof x === "string") : [];
-  if (!text || cited.length === 0 || !cited.every((c) => allowed.has(c))) return fallback();
+  if (!text || cited.length === 0 || !cited.every((c) => allowed.has(c))) {
+    console.warn("ai output rejected", { stepId, raw: raw.slice(0, 500) });
+    return fallback();
+  }
   return { text, cited_edge_ids: [...new Set(cited)], fallback: false };
 }
 
