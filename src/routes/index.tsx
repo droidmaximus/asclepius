@@ -181,12 +181,12 @@ function NodeDetail({
     groups.set(k, [...(groups.get(k) ?? []), e]);
   }
   const facts: [string, string | number | null | undefined][] = [
-    ["Kind", ASSET_KIND_LABEL[String(p.kind ?? "")] ?? (p.kind as string)],
-    ["Status", p.status ? String(p.status).replace(/_/g, " ").toLowerCase() : null],
-    ["Run by", p.sponsor as string],
-    ["Organisation", p.org as string],
-    ["Year", (p.year ?? p.fiscal_year) as string],
-    ["Contact", p.contact as string],
+    ["Kind", ASSET_KIND_LABEL[String(p["kind"] ?? "")] ?? (p["kind"] as string)],
+    ["Status", p["status"] ? String(p["status"]).replace(/_/g, " ").toLowerCase() : null],
+    ["Run by", p["sponsor"] as string],
+    ["Organisation", p["org"] as string],
+    ["Year", (p["year"] ?? p["fiscal_year"]) as string],
+    ["Contact", p["contact"] as string],
   ];
   return (
     <div className="space-y-5">
@@ -197,9 +197,9 @@ function NodeDetail({
           <p className="mt-1 text-xs text-muted-foreground">Also called: {node.synonyms.join(", ")}</p>
         )}
         {node.type === "PatientGroup" && (
-          <p className="mt-1 text-xs text-muted-foreground">{p.verified ? "Confirmed on the group’s own website." : "Not confirmed on the group’s own website."}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{p["verified"] ? "Confirmed on the group’s own website." : "Not confirmed on the group’s own website."}</p>
         )}
-        {p.ambiguous && <p className="mt-1 text-xs text-muted-foreground">This name may match more than one person.</p>}
+        {p["ambiguous"] && <p className="mt-1 text-xs text-muted-foreground">This name may match more than one person.</p>}
       </div>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         {facts.filter(([, v]) => v).map(([k, v]) => (
