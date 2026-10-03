@@ -93,28 +93,37 @@ export async function fetchMeta(): Promise<Meta> {
   return out;
 }
 
-export async function searchNodes(q: string): Promise<AtlasNode[]> {
-  const term = q.trim().replace(/[,()*%"\\]/g, " ").trim();
-  if (term.length < 2) return [];
-  const cap = term.charAt(0).toUpperCase() + term.slice(1);
-  const syn = [term, cap, term.toLowerCase(), term.toUpperCase()]
-    .map((s) => `synonyms.cs.${JSON.stringify([s])}`)
-    .join(",");
-  const { data, error } = await db
-    .from("nodes")
-    .select("id,type,label,synonyms,props")
-    .or(`label.ilike.%${term}%,id.ilike.${term},${syn}`)
-    .limit(40);
-  if (error) throw error;
-  const rank: Record<string, number> = {
-    Disease: 0, Gene: 1, PatientGroup: 2, Mechanism: 3, Phenotype: 4, Asset: 5, Study: 6, Researcher: 7, Paper: 8,
-  };
-  const lower = term.toLowerCase();
-  return (data as AtlasNode[]).sort((a, b) => {
-    const ea = a.label.toLowerCase() === lower || (a.synonyms ?? []).some((s) => s.toLowerCase() === lower) ? -10 : 0;
-    const eb = b.label.toLowerCase() === lower || (b.synonyms ?? []).some((s) => s.toLowerCase() === lower) ? -10 : 0;
-    return ea + (rank[a.type] ?? 9) - (eb + (rank[b.type] ?? 9));
-  }).slice(0, 12);
+export const SEARCH_TYPES = ["Disease", "Gene", "Phenotype", "Mechanism", "PatientGroup"];
+
+let searchable: Promise<AtlasNode[]> | null = null;
+function loadSearchable() {
+  searchable ??= (async () => {
+    const { data, error } = await db.from("nodes").select("id,type,label,synonyms").in("type", SEARCH_TYPES).limit(5000);
+    if (error) { searchable = null; throw error; }
+    return data as AtlasNode[];
+  })();
+  return searchable;
+}
+
+export interface SearchHit { node: AtlasNode; matchedSynonym: string | null; exact: boolean }
+
+export async function searchNodes(q: string): Promise<SearchHit[]> {
+  const t = q.trim().toLowerCase();
+  if (t.length < 2) return [];
+  const all = await loadSearchable();
+  const hits: SearchHit[] = [];
+  for (const n of all) {
+    const l = n.label.toLowerCase();
+    if (l === t) { hits.push({ node: n, matchedSynonym: null, exact: true }); continue; }
+    const syn = n.synonyms ?? [];
+    const se = syn.find((s) => s.toLowerCase() === t);
+    if (se) { hits.push({ node: n, matchedSynonym: se, exact: true }); continue; }
+    if (l.includes(t)) { hits.push({ node: n, matchedSynonym: null, exact: false }); continue; }
+    const sp = syn.find((s) => s.toLowerCase().includes(t));
+    if (sp) hits.push({ node: n, matchedSynonym: sp, exact: false });
+  }
+  const rank = (h: SearchHit) => (h.exact ? 0 : 10) + SEARCH_TYPES.indexOf(h.node.type);
+  return hits.sort((a, b) => rank(a) - rank(b) || a.node.label.length - b.node.label.length).slice(0, 10);
 }
 
 export async function fetchNodes(ids: string[]): Promise<AtlasNode[]> {
