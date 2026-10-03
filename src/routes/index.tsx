@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Search } from "@/components/atlas/Search";
+import { Header, Footer } from "@/components/atlas/Header";
 
 const TITLE = "Rare Disease Atlas — find studies, groups and next steps";
 const DESC =
@@ -28,6 +29,7 @@ function Home() {
   const open = (id: string) => navigate({ to: "/explore", search: { node: id } });
   return (
     <div className="flex min-h-screen flex-col bg-background">
+      <Header />
       <main className="flex flex-1 items-center justify-center px-4">
         <div className="w-full max-w-2xl text-center">
           <h1 className="text-4xl md:text-5xl">Rare Disease Atlas</h1>
@@ -50,9 +52,7 @@ function Home() {
           </div>
         </div>
       </main>
-      <footer className="border-t px-4 py-4 text-center text-xs text-muted-foreground">
-        Research navigation tool, not medical advice. Always check with the study team or a clinician.
-      </footer>
+      <Footer />
     </div>
   );
 }
