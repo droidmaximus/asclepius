@@ -116,7 +116,7 @@ export function ThisWeek({
             {cov.verified_patient_groups === 1 ? "" : "s"}. {meta.claims_kept ?? 0} claims kept, {meta.claims_dropped ?? 0} dropped as too weak.
             Data retrieved {meta.retrieved_at}.
           </p>
-          <p>No result here means a treatment works. A new natural history study or registry listing your disease by name would make these suggestions stronger.</p>
+          <p>Nothing on this page means a treatment works or is safe. A new natural history study or registry listing your disease by name would make these suggestions stronger.</p>
         </section>
       )}
     </div>
