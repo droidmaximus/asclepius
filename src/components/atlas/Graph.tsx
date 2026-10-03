@@ -14,8 +14,17 @@ const SHAPE: Record<string, string> = {
   Paper: "tag",
 };
 
+// Cytoscape cannot parse oklch, so resolve tokens to rgb via a canvas.
 function cssVar(name: string) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 1;
+  const ctx = cv.getContext("2d");
+  if (!ctx) return raw;
+  ctx.fillStyle = raw;
+  ctx.fillRect(0, 0, 1, 1);
+  const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+  return `rgb(${r},${g},${b})`;
 }
 
 export function Graph({

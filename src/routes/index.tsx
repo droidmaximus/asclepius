@@ -119,7 +119,7 @@ function Atlas() {
               </p>
             )}
           </div>
-          <div className="relative h-[60vh] min-h-[380px] lg:h-auto lg:flex-1">
+          <div className="relative h-[60vh] min-h-[380px] lg:h-[calc(100vh-230px)]">
             {hood.data && (
               <Graph
                 centerId={centerId}
@@ -148,7 +148,6 @@ function Atlas() {
           ) : center ? (
             <NodeDetail node={center} edges={hood.data?.edges ?? []} nodes={nodeMap} onEdge={openEdge} onNode={openNode} />
           ) : null}
-          {panel === "week" && null}
         </aside>
       </main>
 
