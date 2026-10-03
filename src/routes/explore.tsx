@@ -1,29 +1,36 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { ExternalLink, X } from "lucide-react";
+import { ExternalLink, Loader2 } from "lucide-react";
 import { Graph } from "@/components/atlas/Graph";
 import { Search } from "@/components/atlas/Search";
-import { ThisWeek } from "@/components/atlas/ThisWeek";
-import { EdgeDetail } from "@/components/atlas/EdgeDetail";
-import { Legend, TierDot } from "@/components/atlas/Legend";
+import { Header, Footer } from "@/components/atlas/Header";
+import { EvidenceDrawer } from "@/components/atlas/EvidenceDrawer";
+import { GapState } from "@/components/atlas/GapState";
+import { Legend, TierDot, TypeDot } from "@/components/atlas/Legend";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   ASSET_KIND_LABEL,
+  MECH_LABEL,
   REL_LABEL,
   TYPE_LABEL,
-  fetchEdgesByIds,
+  expandNode,
   fetchMeta,
   fetchNeighborhood,
   fetchNodes,
   nodeUrl,
   type AtlasEdge,
   type AtlasNode,
+  type GraphData,
+  type Meta,
+  type Pair,
 } from "@/lib/atlas";
 
 const TITLE = "Explore connections — Rare Disease Atlas";
-const DESC =
-  "A plain-language map for rare-disease patient groups: connections, reusable research, collaborators and a next step, with a source for every claim.";
+const DESC = "See how a rare disease connects to genes, symptoms, studies, patient groups and researchers, with the source behind every link.";
 
 export const Route = createFileRoute("/explore")({
   validateSearch: z.object({ node: z.string().optional(), edge: z.string().optional() }),
@@ -38,145 +45,238 @@ export const Route = createFileRoute("/explore")({
     ],
   }),
   ssr: false,
-  component: Atlas,
+  component: Explore,
 });
 
-function Atlas() {
+function Explore() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/explore" });
   const metaQ = useQuery({ queryKey: ["meta"], queryFn: fetchMeta, staleTime: Infinity });
-  const anchor = metaQ.data?.actions?.anchor ?? metaQ.data?.anchor ?? "MONDO:0010099";
+  const anchor = metaQ.data?.actions?.anchor ?? metaQ.data?.anchor;
   const centerId = search.node ?? anchor;
+  const [showWeak, setShowWeak] = useState(false);
 
-  const hood = useQuery({
-    queryKey: ["hood", centerId],
-    queryFn: () => fetchNeighborhood(centerId),
-    enabled: !!metaQ.data,
+  const base = useQuery({
+    queryKey: ["hood", centerId, showWeak],
+    queryFn: () => fetchNeighborhood(centerId!, showWeak),
+    enabled: !!centerId,
   });
-  const anchorQ = useQuery({ queryKey: ["node", anchor], queryFn: () => fetchNodes([anchor]), enabled: !!metaQ.data });
-  const anchorLabel = anchorQ.data?.[0]?.label ?? "your disease";
+  const [graph, setGraph] = useState<GraphData | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [expanding, setExpanding] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  useEffect(() => {
+    setGraph(base.data ?? null);
+    setSelected(null);
+    setNote(null);
+  }, [base.data]);
 
-  const nodeMap = useMemo(() => new Map((hood.data?.nodes ?? []).map((n) => [n.id, n])), [hood.data]);
+  const nodeMap = useMemo(() => new Map((graph?.nodes ?? []).map((n) => [n.id, n])), [graph]);
+  const center = base.data?.center;
 
-  // Edge may not be in the current view (e.g. opened from a step)
-  const edgeQ = useQuery({
-    queryKey: ["edge", search.edge],
-    queryFn: async () => {
-      const [e] = await fetchEdgesByIds([search.edge!]);
-      if (!e) return null;
-      const ns = await fetchNodes([e.source_id, e.target_id]);
-      return { e, ns };
-    },
-    enabled: !!search.edge,
-  });
-  const edgeNodes = useMemo(() => {
-    const m = new Map(nodeMap);
-    edgeQ.data?.ns.forEach((n) => m.set(n.id, n));
-    return m;
-  }, [nodeMap, edgeQ.data]);
-
-  const [panel, setPanel] = useState<"week" | "detail">("week");
-  const openNode = (id: string) => {
-    navigate({ search: { node: id } });
-    setPanel("detail");
+  const tapNode = async (id: string) => {
+    setSelected(id);
+    if (!graph || id === centerId) return;
+    setExpanding(id);
+    try {
+      const g = await expandNode(graph, id, showWeak);
+      setGraph(g);
+      setNote(g.added ? `Added ${g.added} links from ${nodeMap.get(id)?.label}.` : `No more ${showWeak ? "" : "strong "}links to add from ${nodeMap.get(id)?.label}.`);
+    } catch {
+      setNote("Could not load more links. Please try again.");
+    } finally {
+      setExpanding(null);
+    }
   };
-  const openEdge = (id: string) => {
-    navigate({ search: (s) => ({ ...s, edge: id }) });
-    setPanel("detail");
-  };
+  const openNode = (id: string) => navigate({ search: { node: id } });
+  const openEdge = (id: string) => navigate({ search: (s) => ({ ...s, edge: id }) });
 
-  const center = hood.data?.center;
+  const actions = metaQ.data?.actions;
+  const isGap =
+    !!center && center.type === "Disease" && !!actions && !actions.family.includes(center.id) &&
+    !(actions.steps ?? []).some((s) => (s.edge_ids ?? []).some((e) => e.includes(center.id)));
+  const detailNode = (selected && nodeMap.get(selected)) || center;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="border-b">
-        <div className="mx-auto flex max-w-[1500px] flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:gap-8">
-          <button onClick={() => navigate({ to: "/" })} className="shrink-0 text-left">
-            <span className="font-serif text-xl">Rare Disease Atlas</span>
-          </button>
-          <div className="w-full max-w-2xl"><Search onPick={openNode} /></div>
-        </div>
-      </header>
+      <Header><Search onPick={openNode} /></Header>
 
-      <main className="mx-auto grid w-full max-w-[1500px] flex-1 grid-cols-1 lg:grid-cols-[380px_1fr_400px]">
-        {/* Left: this week */}
+      <main className="mx-auto grid w-full max-w-[1500px] flex-1 grid-cols-1 lg:grid-cols-[340px_1fr_380px]">
         <aside className="order-2 border-b p-5 lg:order-1 lg:max-h-[calc(100vh-65px)] lg:overflow-auto lg:border-b-0 lg:border-r">
-          {(metaQ.isLoading || hood.isLoading) && <p className="text-sm text-muted-foreground">Loading…</p>}
-          {metaQ.error && <p className="text-sm text-destructive">Could not load data. Please refresh.</p>}
-          {metaQ.data && (
-            <ThisWeek meta={metaQ.data} anchorLabel={anchorLabel} onOpenNode={openNode} onOpenEdge={openEdge} />
-          )}
+          {metaQ.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+          {metaQ.error && <p className="text-sm text-destructive">Could not load the atlas summary. Please refresh.</p>}
+          {metaQ.data && <ClusterPanel meta={metaQ.data} onOpenNode={openNode} />}
         </aside>
 
-        {/* Center: graph */}
         <section className="order-1 flex flex-col border-b lg:order-2 lg:border-b-0">
-          <div className="px-5 pt-5">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">{center ? TYPE_LABEL[center.type] ?? center.type : " "}</p>
-            <h1 className="text-3xl leading-tight">{center?.label ?? "Loading map…"}</h1>
-            {hood.data && (
-              <p className="mt-1 text-sm text-muted-foreground">
-                Showing {hood.data.edges.length} of {hood.data.totalEdges} connections. Click a dot to open it, or a line to see where it came from.
-              </p>
-            )}
+          <div className="space-y-3 px-5 pt-5">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">{center ? TYPE_LABEL[center.type] ?? center.type : "\u00a0"}</p>
+              <h1 className="text-3xl leading-tight">{center?.label ?? (base.isLoading || metaQ.isLoading ? "Loading map…" : "Not found")}</h1>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+              <span>
+                {graph && `${graph.nodes.length} items, ${graph.edges.length} links shown.`}
+                {graph && graph.hiddenWeak > 0 && ` ${graph.hiddenWeak} weaker links hidden.`}
+                {" "}Click a dot to add its neighbours, or a line to see where it came from.
+              </span>
+              <label className="flex items-center gap-2 text-foreground">
+                <Switch checked={showWeak} onCheckedChange={setShowWeak} aria-label="Show weaker links" /> Show weaker links
+              </label>
+            </div>
+            {isGap && <GapState actions={actions} />}
+            {base.error && <p className="text-sm text-destructive">Could not load connections. Please refresh.</p>}
+            {base.data === null && <p className="text-sm text-muted-foreground">That item is not in the atlas.</p>}
+            {graph && graph.edges.length === 0 && !isGap && <GapState actions={actions} missing="No links to this item were found with this filter. Try “Show weaker links”." />}
           </div>
-          <div className="relative h-[60vh] min-h-[380px] lg:h-[calc(100vh-230px)]">
-            {hood.data && (
-              <Graph
-                centerId={centerId}
-                nodes={hood.data.nodes}
-                edges={hood.data.edges}
-                selectedEdgeId={search.edge}
-                onSelectNode={(id) => (id === centerId ? setPanel("detail") : openNode(id))}
-                onSelectEdge={openEdge}
-              />
+          <div className="relative h-[60vh] min-h-[380px] lg:h-[calc(100vh-280px)]">
+            {(base.isLoading || expanding) && (
+              <p className="absolute right-4 top-3 z-10 flex items-center gap-1 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading links…</p>
             )}
-            {hood.error && <p className="p-5 text-sm text-destructive">Could not load connections. Please refresh.</p>}
-            {edgeQ.error && <p className="p-5 text-sm text-destructive">Could not load that connection.</p>}
-            {hood.data === null && <p className="p-5 text-sm text-muted-foreground">That item is not in the atlas.</p>}
+            {note && <p className="absolute left-4 top-3 z-10 rounded bg-background/90 px-2 text-xs text-muted-foreground" role="status">{note}</p>}
+            {graph && centerId && graph.edges.length > 0 && (
+              <Graph centerId={centerId} nodes={graph.nodes} edges={graph.edges} level={graph.level} selectedEdgeId={search.edge} onTapNode={tapNode} onSelectEdge={openEdge} />
+            )}
           </div>
           <div className="border-t px-5 py-3"><Legend /></div>
         </section>
 
-        {/* Right: details */}
         <aside className="order-3 p-5 lg:max-h-[calc(100vh-65px)] lg:overflow-auto lg:border-l">
-          {search.edge && edgeQ.data ? (
-            <div>
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-xs font-medium uppercase tracking-wide text-primary">Why this connection</p>
-                <button aria-label="Close" onClick={() => navigate({ search: (s) => ({ node: s.node }) })}><X className="h-4 w-4" /></button>
-              </div>
-              <EdgeDetail edge={edgeQ.data.e} nodes={edgeNodes} onOpenNode={openNode} />
-            </div>
-          ) : center ? (
-            <NodeDetail node={center} edges={hood.data?.edges ?? []} nodes={nodeMap} onEdge={openEdge} onNode={openNode} />
-          ) : null}
+          {detailNode && graph && (
+            <NodeDetail node={detailNode} isCenter={detailNode.id === centerId} edges={graph.edges} nodes={nodeMap} onEdge={openEdge} onCenter={openNode} />
+          )}
         </aside>
       </main>
-
-      <footer className="border-t px-4 py-4 text-center text-xs text-muted-foreground">
-        Research navigation tool, not medical advice. Always check with the study team or a clinician.
-      </footer>
+      <Footer />
+      <EvidenceDrawer edgeId={search.edge} onClose={() => navigate({ search: (s) => ({ node: s.node }) })} onOpenNode={openNode} />
     </div>
   );
 }
 
+/* ---------------- Cluster neighbours + counterexamples ---------------- */
+
+function ClusterPanel({ meta, onOpenNode }: { meta: Meta; onOpenNode: (id: string) => void }) {
+  const anchor = meta.actions?.anchor ?? meta.anchor ?? "";
+  const analysis = meta.analysis;
+  const neighbors = Object.entries(meta.actions?.neighbors ?? {}).sort((a, b) => b[1] - a[1]);
+  const pairs = analysis?.pairs ?? [];
+  const counter = analysis?.counterexamples ?? [];
+  const findPair = (x: string) => pairs.find((p) => (p.a === anchor && p.b === x) || (p.b === anchor && p.a === x));
+  const ids = new Set<string>([anchor, ...neighbors.map(([id]) => id)]);
+  for (const p of [...counter, ...neighbors.map(([id]) => findPair(id)).filter(Boolean) as Pair[]]) {
+    ids.add(p.a); ids.add(p.b); p.shared_genes.forEach((g) => ids.add(g));
+  }
+  const labelsQ = useQuery({ queryKey: ["labels", [...ids].sort().join()], queryFn: () => fetchNodes([...ids]) });
+  const L = new Map((labelsQ.data ?? []).map((n) => [n.id, n.label]));
+  const lab = (id: string) => L.get(id) ?? id;
+  const [open, setOpen] = useState<Pair | null>(null);
+  const lookAlike = counter.filter((c) => c.kind === "look_alike_different_mechanism");
+  const samePath = counter.filter((c) => c.kind !== "look_alike_different_mechanism");
+
+  return (
+    <Tabs defaultValue="neighbours">
+      <TabsList className="w-full">
+        <TabsTrigger value="neighbours" className="flex-1">Closest neighbours</TabsTrigger>
+        <TabsTrigger value="counter" className="flex-1">Counterexamples</TabsTrigger>
+      </TabsList>
+      <TabsContent value="neighbours" className="mt-4 space-y-3">
+        <p className="text-sm text-muted-foreground">Diseases most similar to {lab(anchor)}, scored by shared symptoms, genes and body processes.</p>
+        {labelsQ.error && <p className="text-sm text-destructive">Could not load names.</p>}
+        {neighbors.length === 0 && <p className="text-sm text-muted-foreground">No close neighbours were found.</p>}
+        <ul className="space-y-2">
+          {neighbors.map(([id, score]) => {
+            const p = findPair(id);
+            const genes = p?.shared_genes.map(lab) ?? [];
+            const mechs = p?.shared_mechanisms.map((m) => MECH_LABEL[m] ?? m) ?? [];
+            return (
+              <li key={id} className="rounded-md border p-3 text-sm">
+                <div className="flex items-baseline justify-between gap-2">
+                  <button onClick={() => onOpenNode(id)} className="text-left hover:underline">{lab(id)}</button>
+                  <span className="shrink-0 text-xs text-muted-foreground">{Math.round(score * 100)}% similar</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {genes.length ? `Shared genes: ${genes.join(", ")}. ` : "No shared genes. "}
+                  {mechs.length ? `Shared pathway: ${mechs.join(", ")}.` : "No shared pathway."}
+                </p>
+                {p && <button onClick={() => setOpen(p)} className="mt-1 text-xs text-primary hover:underline">Why these are neighbours</button>}
+              </li>
+            );
+          })}
+        </ul>
+      </TabsContent>
+      <TabsContent value="counter" className="mt-4 space-y-5">
+        <p className="text-sm text-muted-foreground">Cases where similar looks and shared causes point in different directions. Useful for checking a lead before acting on it.</p>
+        <CounterList title="Look alike, different cause" items={lookAlike} lab={lab} onOpen={setOpen} />
+        <CounterList title="Different symptoms, same pathway" items={samePath} lab={lab} onOpen={setOpen} />
+      </TabsContent>
+      <PairDialog pair={open} onClose={() => setOpen(null)} lab={lab} termLabels={analysis?.term_labels ?? {}} />
+    </Tabs>
+  );
+}
+
+function CounterList({ title, items, lab, onOpen }: { title: string; items: Pair[]; lab: (id: string) => string; onOpen: (p: Pair) => void }) {
+  return (
+    <section>
+      <h3 className="mb-2 text-base">{title}</h3>
+      {items.length === 0 && <p className="text-sm text-muted-foreground">None found.</p>}
+      <ul className="space-y-2">
+        {items.map((p) => (
+          <li key={p.a + p.b}>
+            <button onClick={() => onOpen(p)} className="w-full rounded-md border p-3 text-left text-sm hover:border-primary">
+              {lab(p.a)} <span className="text-muted-foreground">and</span> {lab(p.b)}
+              <span className="block text-xs text-muted-foreground">{p.shared_terms.length} shared symptoms · {p.shared_mechanisms.length ? "same pathway" : "different pathway"}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function PairDialog({ pair, onClose, lab, termLabels }: { pair: Pair | null; onClose: () => void; lab: (id: string) => string; termLabels: Record<string, string> }) {
+  return (
+    <Dialog open={!!pair} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
+        {pair && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="font-serif text-xl font-medium">{lab(pair.a)} and {lab(pair.b)}</DialogTitle>
+              <DialogDescription>Similarity score {Math.round(pair.score * 100)}%. This is our own scoring (inferred), not a proven link.</DialogDescription>
+            </DialogHeader>
+            <section className="text-sm">
+              <h4 className="mb-1 font-medium">Top shared symptoms</h4>
+              {pair.shared_terms.length ? (
+                <ul className="list-disc pl-5">{pair.shared_terms.map((t) => <li key={t}>{termLabels[t] ?? t}</li>)}</ul>
+              ) : <p className="text-muted-foreground">None.</p>}
+            </section>
+            <section className="text-sm">
+              <h4 className="mb-1 font-medium">Shared pathways</h4>
+              <p>{pair.shared_mechanisms.length ? pair.shared_mechanisms.map((m) => MECH_LABEL[m] ?? m).join(", ") : "None."}</p>
+            </section>
+            <section className="text-sm">
+              <h4 className="mb-1 font-medium">Shared genes</h4>
+              <p>{pair.shared_genes.length ? pair.shared_genes.map(lab).join(", ") : "None."}</p>
+            </section>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ---------------- Node detail ---------------- */
+
 function NodeDetail({
-  node,
-  edges,
-  nodes,
-  onEdge,
-  onNode,
+  node, isCenter, edges, nodes, onEdge, onCenter,
 }: {
-  node: AtlasNode;
-  edges: AtlasEdge[];
-  nodes: Map<string, AtlasNode>;
-  onEdge: (id: string) => void;
-  onNode: (id: string) => void;
+  node: AtlasNode; isCenter: boolean; edges: AtlasEdge[]; nodes: Map<string, AtlasNode>;
+  onEdge: (id: string) => void; onCenter: (id: string) => void;
 }) {
   const p = (node.props ?? {}) as Record<string, string | number | boolean | null>;
   const url = nodeUrl(node);
+  const mine = edges.filter((e) => e.source_id === node.id || e.target_id === node.id);
   const groups = new Map<string, AtlasEdge[]>();
-  for (const e of edges) {
+  for (const e of mine) {
     const other = nodes.get(e.source_id === node.id ? e.target_id : e.source_id);
     const k = other?.type ?? "Other";
     groups.set(k, [...(groups.get(k) ?? []), e]);
@@ -192,58 +292,55 @@ function NodeDetail({
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-primary">{TYPE_LABEL[node.type] ?? node.type}</p>
+        <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground"><TypeDot type={node.type} />{TYPE_LABEL[node.type] ?? node.type}</p>
         <h2 className="mt-1 text-xl leading-snug">{node.label}</h2>
-        {node.synonyms && node.synonyms.length > 0 && (
-          <p className="mt-1 text-xs text-muted-foreground">Also called: {node.synonyms.join(", ")}</p>
-        )}
+        {node.synonyms && node.synonyms.length > 0 && <p className="mt-1 text-xs text-muted-foreground">Also called: {node.synonyms.join(", ")}</p>}
         {node.type === "PatientGroup" && (
           <p className="mt-1 text-xs text-muted-foreground">{p["verified"] ? "Confirmed on the group’s own website." : "Not confirmed on the group’s own website."}</p>
         )}
-        {p["ambiguous"] && <p className="mt-1 text-xs text-muted-foreground">This name may match more than one person.</p>}
+        {p["ambiguous"] && <p className="mt-1 text-xs text-muted-foreground">Name may match several people.</p>}
+        {!isCenter && (
+          <button onClick={() => onCenter(node.id)} className="mt-2 text-sm text-primary hover:underline">Put this at the centre</button>
+        )}
       </div>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         {facts.filter(([, v]) => v).map(([k, v]) => (
           <div key={k} className="contents"><dt className="text-muted-foreground">{k}</dt><dd>{v}</dd></div>
         ))}
-        <dt className="text-muted-foreground">ID</dt><dd className="text-xs text-muted-foreground">{node.id}</dd>
       </dl>
       {url && (
         <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
           Open original record <ExternalLink className="h-3.5 w-3.5" />
         </a>
       )}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {[...groups.entries()].map(([type, es]) => (
           <details key={type} open={groups.size <= 3}>
-            <summary className="cursor-pointer text-sm font-medium">
-              {TYPE_LABEL[type] ?? type} <span className="text-muted-foreground">({es.length})</span>
-            </summary>
+            <summary className="cursor-pointer text-sm font-medium">{TYPE_LABEL[type] ?? type} <span className="text-muted-foreground">({es.length})</span></summary>
             <ul className="mt-2 space-y-1">
               {es.map((e) => {
                 const otherId = e.source_id === node.id ? e.target_id : e.source_id;
-                const other = nodes.get(otherId);
                 const rel = REL_LABEL[e.type] ?? e.type;
                 return (
-                  <li key={e.id} className="flex items-start gap-2 text-sm">
-                    <TierDot tier={e.tier} />
-                    <span className="flex-1 -mt-1">
-                      <button onClick={() => onNode(otherId)} className="text-left hover:underline">{other?.label ?? otherId}</button>
-                      <span className="block text-xs text-muted-foreground">
-                        {e.source_id === node.id ? `this ${rel} it` : `it ${rel} this`}
-                        {e.evidence_type === "inferred" && " · unproven"}
-                        {e.contradicts && e.contradicts.length > 0 && <span className="text-contradict"> · evidence against</span>}
-                        {" · "}
-                        <button onClick={() => onEdge(e.id)} className="text-primary hover:underline">why?</button>
+                  <li key={e.id}>
+                    <button onClick={() => onEdge(e.id)} className="flex w-full items-start gap-2 rounded px-1 py-1 text-left text-sm hover:bg-muted">
+                      <TierDot tier={e.tier} />
+                      <span className="-mt-1 flex-1">
+                        {nodes.get(otherId)?.label ?? otherId}
+                        <span className="block text-xs text-muted-foreground">
+                          {e.source_id === node.id ? `this ${rel} it` : `it ${rel} this`}
+                          {e.evidence_type === "inferred" && " · unproven"}
+                          {e.contradicts && e.contradicts.length > 0 && <span className="text-contradict"> · evidence against</span>}
+                        </span>
                       </span>
-                    </span>
+                    </button>
                   </li>
                 );
               })}
             </ul>
           </details>
         ))}
-        {edges.length === 0 && <p className="text-sm text-muted-foreground">No connections found for this item in the sources searched.</p>}
+        {mine.length === 0 && <p className="text-sm text-muted-foreground">No links shown for this item yet.</p>}
       </div>
     </div>
   );
