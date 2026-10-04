@@ -269,6 +269,17 @@ export async function fetchEvidence(ids: string[]): Promise<Evidence[]> {
   return data as Evidence[];
 }
 
+export async function fetchEvidenceBundle(edges: AtlasEdge[]) {
+  const ids = edges.map((e) => e.id);
+  const linkedIds = [...new Set(edges.flatMap((e) => [...(e.evidence_ids ?? []), ...(e.contradicts ?? [])]))];
+  const [byEdge, byId] = await Promise.all([
+    ids.length ? db.from("evidence").select("*").in("edge_id", ids) : Promise.resolve({ data: [], error: null }),
+    fetchEvidence(linkedIds),
+  ]);
+  if (byEdge.error) throw byEdge.error;
+  return [...new Map([...(byEdge.data as Evidence[]), ...byId].map((e) => [e.id, e])).values()];
+}
+
 /* ---------- plain-language helpers ---------- */
 
 export const TYPE_LABEL: Record<string, string> = {
@@ -324,6 +335,9 @@ export const SOURCE_LABEL: Record<string, string> = {
   "clinicaltrials.gov": "ClinicalTrials.gov",
   nih_reporter: "NIH RePORTER",
   reporter: "NIH RePORTER",
+  "nih-reporter": "NIH RePORTER",
+  "infores:omim": "OMIM",
+  "curated:mechanisms.yaml": "Atlas-curated mechanism mapping",
 };
 export const sourceName = (s?: string | null) => (s ? SOURCE_LABEL[s] ?? s : "Unknown source");
 
