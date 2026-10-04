@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
 import { Header, Footer } from "@/components/atlas/Header";
+import { TempleBackdrop } from "@/components/atlas/Temple";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ANCHOR, IMPACT, routeWeeks, speedup, type Basis, type RouteStep } from "@/lib/impact";
@@ -47,7 +48,7 @@ function BasisBadge({ basis }: { basis: Basis }) {
 function Timeline({ title, steps, scale }: { title: string; steps: RouteStep[]; scale: number }) {
   const total = routeWeeks(steps);
   return (
-    <section className="rounded-md border p-5">
+    <section className="rounded-md border bg-card p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-xl">{title}</h2>
         <p className="text-sm text-muted-foreground">{weeks(total.min, total.max)} in total</p>
@@ -95,7 +96,8 @@ function Impact() {
   const markerAt = Math.min(Math.max((Math.log(10) - Math.log(s.low)) / (Math.log(s.high) - Math.log(s.low)), 0), 1);
 
   return (
-    <div className="atlas-page flex min-h-screen flex-col">
+    <div className="atlas-page relative isolate flex min-h-screen flex-col">
+      <TempleBackdrop />
       <Header />
       <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-8 lg:px-9">
         <p className="text-xs font-medium uppercase tracking-wide text-primary">The 10× case</p>
@@ -123,7 +125,7 @@ function Impact() {
           <Timeline title="Asclepius route: join the registry that exists" steps={routes.asclepius} scale={scale} />
         </div>
 
-        <section className="mt-8 rounded-md border p-5">
+        <section className="mt-8 rounded-md border bg-card p-5">
           <h2 className="text-xl">What to validate next</h2>
           <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
             {IMPACT.validateNext.map((v) => <li key={v}>{v}</li>)}

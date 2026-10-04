@@ -6,6 +6,7 @@ import { Loader2, AlertTriangle, ArrowUpRight, BookOpen, Mail } from "lucide-rea
 import { useServerFn } from "@tanstack/react-start";
 import { draftProposal, explainStep } from "@/lib/ai.functions";
 import { Header, Footer } from "@/components/atlas/Header";
+import { TempleBackdrop } from "@/components/atlas/Temple";
 import { EvidenceDrawer } from "@/components/atlas/EvidenceDrawer";
 import { SourceEvidence } from "@/components/atlas/SourceEvidence";
 import { citationDate, sourceRecordId } from "@/lib/citations";
@@ -78,7 +79,8 @@ function NextStep() {
   const openEdge = (id: string) => navigate({ search: { edge: id } });
 
   return (
-    <div className="atlas-page flex min-h-screen flex-col">
+    <div className="atlas-page relative isolate flex min-h-screen flex-col">
+      <TempleBackdrop />
       <Header />
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-8 lg:px-9">
         {metaQ.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
@@ -120,7 +122,7 @@ function NextStep() {
                     <p>{a.next_question}</p>
                   </section>
                 )}
-                <section className="rounded-md border p-4">
+                <section className="rounded-md border bg-card p-4">
                   <h3 className="mb-2 text-base">Gaps</h3>
                   {a.gaps.length === 0 ? (
                     <p className="text-muted-foreground">No gaps were flagged for this disease in the sources searched.</p>
@@ -128,7 +130,7 @@ function NextStep() {
                     <ul className="list-disc space-y-1 pl-5">{a.gaps.map((g, i) => <li key={i}>{typeof g === "string" ? g : JSON.stringify(g)}</li>)}</ul>
                   )}
                 </section>
-                <section className="rounded-md border p-4">
+                <section className="rounded-md border bg-card p-4">
                   <h3 className="mb-2 text-base">What we searched</h3>
                   <ul className="list-disc pl-5">{(a.coverage?.sources_searched ?? []).map((s) => <li key={s}>{s}</li>)}</ul>
                   {a.coverage && (
@@ -137,7 +139,7 @@ function NextStep() {
                     </p>
                   )}
                 </section>
-                <section className="rounded-md border p-4">
+                <section className="rounded-md border bg-card p-4">
                   <h3 className="mb-2 text-base">People working across these diseases</h3>
                   {researchers.length === 0 && <p className="text-muted-foreground">None found.</p>}
                   <ul className="space-y-3">

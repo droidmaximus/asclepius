@@ -3,13 +3,14 @@ import { HelpCircle } from "lucide-react";
 import logo from "@/assets/asclepius-logo.jpeg";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { EvBadge, TierBadge } from "./Legend";
+import { MeanderBand } from "./Temple";
 
 export function Header({ children }: { children?: React.ReactNode }) {
   const link = "whitespace-nowrap rounded px-2 py-1 max-sm:px-1.5 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring";
   return (
-    <header className="border-b">
+    <header className="relative z-20 bg-background/75 backdrop-blur-sm">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
-        <Link to="/" className="flex shrink-0 items-center gap-3 font-serif text-lg"><img src={logo} alt="" className="h-12 w-12 shrink-0 object-contain" />Asclepius</Link>
+        <Link to="/" className="flex shrink-0 items-center gap-3 font-serif text-lg"><img src={logo} alt="" className="h-12 w-12 shrink-0 object-contain mix-blend-multiply" />Asclepius</Link>
         <nav className="flex max-w-full items-center gap-1 max-sm:gap-0 max-sm:overflow-x-auto max-sm:py-0.5 max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden">
           <Link to="/" className={link} activeOptions={{ exact: true }} activeProps={{ className: "text-foreground font-medium" }}>Search</Link>
           <Link to="/explore" className={link} activeProps={{ className: "text-foreground font-medium" }}>Connections</Link>
@@ -19,14 +20,16 @@ export function Header({ children }: { children?: React.ReactNode }) {
         </nav>
         {children && <div className="w-full md:ml-auto md:w-auto md:min-w-[420px] md:max-w-xl md:flex-1">{children}</div>}
       </div>
+      <div className="border-y border-gold/40 py-[3px]"><MeanderBand className="opacity-60" /></div>
     </header>
   );
 }
 
 export function Footer() {
   return (
-    <footer className="border-t px-4 py-4 text-center text-xs text-muted-foreground">
-      Research navigation tool, not medical advice. Always check with the study team or a clinician.
+    <footer className="relative z-10 bg-background/75 text-center text-xs text-muted-foreground backdrop-blur-sm">
+      <div className="border-y border-gold/40 py-[3px]"><MeanderBand className="opacity-60" /></div>
+      <p className="px-4 py-4">Research navigation tool, not medical advice. Always check with the study team or a clinician.</p>
     </footer>
   );
 }
