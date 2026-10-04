@@ -18,6 +18,16 @@ function cssVar(name: string) {
   return `rgb(${r},${g},${b})`;
 }
 
+// Prefer readable labels over squeezing every expanded connection into view.
+function frameMap(cy: Core, centerId: string) {
+  cy.fit(undefined, 32);
+  if (cy.zoom() < 1) {
+    cy.zoom(1);
+    const center = cy.getElementById(centerId);
+    if (center.length) cy.center(center);
+  }
+}
+
 export function Graph({
   centerId,
   nodes,
@@ -56,6 +66,8 @@ export function Graph({
       const typeColor: Record<string, string> = {};
       for (const [t, v] of Object.entries(TYPE_TOKEN)) typeColor[t] = cssVar(v);
       const previous = cyRef.current;
+      const sameCenter = previous?.getElementById(centerId).data("center") === 1;
+      const previousView = sameCenter && previous ? { zoom: previous.zoom(), pan: { ...previous.pan() } } : null;
       const positions = new Map(previous?.nodes().map((n) => [n.id(), n.position()] as const) ?? []);
       previous?.destroy();
       const cy = cytoscape({
@@ -91,7 +103,7 @@ export function Graph({
               "border-width": 2,
               "border-color": c.bg,
               label: "data(label)",
-              "font-size": 14,
+              "font-size": 16,
               color: c.fg,
               "text-valign": "bottom",
               "text-margin-y": 8,
@@ -104,7 +116,7 @@ export function Graph({
               "font-family": "IBM Plex Sans, sans-serif",
             },
           },
-          { selector: "node[center = 1]", style: { width: 38, height: 38, "font-size": 16, "font-weight": 600 as never, "border-color": c.high, "border-width": 3 } },
+          { selector: "node[center = 1]", style: { width: 38, height: 38, "font-size": 18, "font-weight": 600 as never, "border-color": c.high, "border-width": 3 } },
           { selector: "node:selected", style: { "border-color": c.high, "border-width": 3 } },
           { selector: "edge", style: { width: 1.4, "curve-style": "bezier", "line-color": c.low, opacity: 0.55 } },
           { selector: "edge[tier = 'high']", style: { "line-color": c.high, width: 2.2 } },
@@ -124,12 +136,24 @@ export function Graph({
           gravity: 0.15,
           numIter: 1000,
           padding: 36,
+          fit: false,
           animate: false,
         } as never,
         minZoom: 0.05,
         maxZoom: 3,
         wheelSensitivity: 0.2,
       });
+      if (!previousView) {
+        const bounds = cy.nodes().boundingBox({ includeLabels: false });
+        const scale = Math.min(1, Math.max(1, cy.width() - 200) / Math.max(1, bounds.w), Math.max(1, cy.height() - 150) / Math.max(1, bounds.h));
+        cy.nodes().positions((node) => ({
+          x: (node.position().x - (bounds.x1 + bounds.w / 2)) * scale,
+          y: (node.position().y - (bounds.y1 + bounds.h / 2)) * scale,
+        }));
+        frameMap(cy, centerId);
+      } else {
+        cy.viewport(previousView);
+      }
       cy.on("tap", "node", (ev) => handlers.current.onTapNode(ev.target.id()));
       cy.on("tap", "edge", (ev) => handlers.current.onSelectEdge(ev.target.id()));
       cy.on("mouseover", "node", (ev) => {
@@ -158,8 +182,10 @@ export function Graph({
     const observer = new ResizeObserver(() => {
       const cy = cyRef.current;
       if (!cy) return;
+      const zoom = cy.zoom();
+      const pan = { ...cy.pan() };
       cy.resize();
-      cy.fit(undefined, 36);
+      cy.viewport({ zoom, pan });
     });
     observer.observe(container);
     return () => observer.disconnect();
@@ -174,7 +200,7 @@ export function Graph({
     <div className="absolute bottom-3 right-3 flex gap-1 rounded-md border bg-background p-1">
       <Button variant="ghost" size="icon" aria-label="Zoom in" title="Zoom in" onClick={() => zoom(1.25)}><ZoomIn /></Button>
       <Button variant="ghost" size="icon" aria-label="Zoom out" title="Zoom out" onClick={() => zoom(0.8)}><ZoomOut /></Button>
-      <Button variant="ghost" size="icon" aria-label="Fit map" title="Fit map" onClick={() => cyRef.current?.fit(undefined, 36)}><Scan /></Button>
+      <Button variant="ghost" size="icon" aria-label="Fit map" title="Fit map" onClick={() => { const cy = cyRef.current; if (cy) frameMap(cy, centerId); }}><Scan /></Button>
     </div>
   </>;
 }
