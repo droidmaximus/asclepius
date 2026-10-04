@@ -235,9 +235,11 @@ function CounterList({ title, items, lab, onOpen }: { title: string; items: Pair
       <ul className="space-y-2">
         {items.map((p) => (
           <li key={p.a + p.b}>
-            <Button variant="link" onClick={() => onOpen(p)} className="w-full rounded-md border p-3 text-left text-sm hover:border-primary">
-              {lab(p.a)} <span className="text-muted-foreground">and</span> {lab(p.b)}
-              <span className="block text-xs text-muted-foreground">{p.shared_terms.length} shared symptoms · {p.shared_mechanisms.length ? "same pathway" : "different pathway"}</span>
+            <Button variant="link" onClick={() => onOpen(p)} className="h-auto min-w-0 w-full rounded-md border p-3 text-left text-sm whitespace-normal hover:border-primary">
+              <span className="block min-w-0 w-full break-words">
+                <span className="block">{lab(p.a)} <span className="text-muted-foreground">and</span> {lab(p.b)}</span>
+                <span className="mt-2 block text-xs text-muted-foreground">{p.shared_terms.length} shared symptoms · {p.shared_mechanisms.length ? "same pathway" : "different pathway"}</span>
+              </span>
             </Button>
           </li>
         ))}
