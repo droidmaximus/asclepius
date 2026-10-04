@@ -1,5 +1,5 @@
 # Roadmap
-- [ ] Stabilise background motion across scrolling, pause/resume, page changes and viewport sizes; verify visible rendering.
+- [x] Stabilise background motion across scrolling, pause/resume, page changes and viewport sizes; verify visible rendering.
 - [x] Add topic-relevant scroll-reactive 3D backgrounds to every page and a pointer-reactive search background; verify readability and existing flows.
 - [x] Rename the product Asclepius and use the supplied image as its logo and favicon.
 - [x] Home: centred search with example chips, type-filtered search, synonym matches, states
