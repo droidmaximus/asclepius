@@ -99,7 +99,6 @@
   --border: oklch(0.943822 0.007476 197.030);
   --input: oklch(0.9 0.005 220);
   --ring: oklch(0.542335 0.090711 198.762);
-  --greek-motif-ink: color-mix(in oklch, var(--primary) 16%, var(--background));
   --tier-high: oklch(0.48 0.11 195);
   --tier-medium: oklch(0.72 0.07 195);
   --tier-low: oklch(0.8 0.005 240);
@@ -143,37 +142,7 @@
 }
 
 /* Atlas workspace: a quiet reading surface with a persistent context rail. */
-/* Static Greek meanders stay at the page edges, away from research text. */
-body::before, body::after {
-  content: "";
-  position: fixed;
-  top: 88px;
-  bottom: 52px;
-  width: 16px;
-  background: var(--greek-motif-ink);
-  mask: url("/greek-meander.svg") top center / 16px 16px repeat-y;
-  pointer-events: none;
-  z-index: 0;
-}
-body::before { left: 3px; }
-body::after { right: 3px; }
-.atlas-page { position: relative; }
-.atlas-search-page::before, .atlas-search-page::after {
-  content: "";
-  position: absolute;
-  left: 48px;
-  right: 48px;
-  height: 32px;
-  background: var(--greek-motif-ink);
-  mask: url("/greek-meander.svg") center / 32px 32px repeat-x;
-  pointer-events: none;
-}
-.atlas-search-page::before { top: 112px; }
-.atlas-search-page::after { bottom: 88px; }
-@media (max-width: 640px) {
-  body::before, body::after { width: 8px; mask-size: 8px 8px; }
-  .atlas-search-page::before, .atlas-search-page::after { left: 24px; right: 24px; height: 24px; mask-size: 24px 24px; }
-}
+
 .atlas-workspace { width: 100%; max-width: 1440px; margin: 0 auto; display: grid; grid-template-columns: 300px minmax(0, 1fr); }
 .atlas-workspace.is-collapsed { grid-template-columns: 64px minmax(0, 1fr); }
 .atlas-context { border-right: 1px solid var(--border); padding: 24px; min-width: 0; }
