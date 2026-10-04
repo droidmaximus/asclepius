@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Search } from "@/components/atlas/Search";
 import { Header, Footer } from "@/components/atlas/Header";
-import { AsclepiusRod, Portico, TempleBackdrop } from "@/components/atlas/Temple";
+import { AsclepiusRod, TempleBackdrop } from "@/components/atlas/Temple";
 
 const TITLE = "Asclepius — find studies, groups and next steps";
 const DESC =
@@ -34,7 +34,6 @@ function Home() {
       <TempleBackdrop variant="hero" />
       <Header />
       <main className="flex flex-1 flex-col items-center justify-center px-4 py-10">
-        <Portico>
           <div className="mx-auto w-full max-w-2xl text-center">
             <AsclepiusRod className="mx-auto h-44 w-[66px] md:h-56 md:w-[84px]" />
             <p className="mt-3 font-serif text-xs uppercase tracking-[0.3em] text-gold">
@@ -59,24 +58,9 @@ function Home() {
               ))}
             </div>
           </div>
-        </Portico>
-        <ul className="mx-auto mt-14 grid w-full max-w-4xl gap-4 sm:grid-cols-3">
-          {PILLARS.map((p) => (
-            <li key={p.numeral} className="group rounded-lg border border-gold/30 bg-background/80 p-5 text-left backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-gold/70 hover:shadow-[0_12px_30px_-16px_oklch(0.6_0.1_78/0.6)]">
-              <span className="font-serif text-2xl text-gold transition-colors group-hover:text-primary">{p.numeral}</span>
-              <h2 className="mt-1 text-lg">{p.title}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{p.text}</p>
-            </li>
-          ))}
-        </ul>
       </main>
       <Footer />
     </div>
   );
 }
 
-const PILLARS = [
-  { numeral: "Α", title: "Every line has a source", text: "Each connection names where it came from, when it was retrieved, and how strong the support is." },
-  { numeral: "Β", title: "Read the exact quote", text: "Links read from papers keep the sentence they came from, with any source that disagrees beside it." },
-  { numeral: "Γ", title: "A step for this week", text: "Registries and studies you could reuse, who runs them, and a first message checked against the atlas." },
-];
