@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ASSET_KIND_LABEL, REL_LABEL, sourceName, fetchEvidenceBundle, fetchEdgesByIds, fetchMeta, fetchNodes, type AtlasEdge, type AtlasNode, type Evidence, type Step, type Tier } from "@/lib/atlas";
 
-const TITLE = "Your next step this week — Rare Disease Atlas";
+const TITLE = "Your next step this week — Asclepius";
 const DESC = "Reusable registries, studies and patient groups for your disease, with what differs, what to ask an expert, and the source for each.";
 
 export const Route = createFileRoute("/next-step")({

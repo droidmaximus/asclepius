@@ -68,7 +68,7 @@ async function run(stepId: string, systemPrompt: string, withQuotes: boolean): P
   try {
     res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Title": "Rare Disease Atlas" },
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Title": "Asclepius" },
       body: JSON.stringify({
         model,
         temperature: 0,

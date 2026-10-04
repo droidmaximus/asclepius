@@ -9,7 +9,8 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-## Rare Disease Atlas
+## Asclepius
+- Serve uploaded branding through a CDN asset pointer and derive a small local favicon from the same image so branding stays consistent without shipping large binaries.
 - App is read-only against Supabase tables nodes/edges/evidence/meta via the browser client; never add tables or writes — data comes from an external pipeline.
 - Data-driven routes (/explore, /next-step) use ssr:false because Cytoscape and on-demand queries are browser-only.
 - Graph colours come from CSS tokens resolved to rgb at runtime (Cytoscape cannot parse oklch); keep colours in src/styles.css.
