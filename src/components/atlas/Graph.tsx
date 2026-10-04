@@ -28,6 +28,42 @@ function frameMap(cy: Core, centerId: string) {
   }
 }
 
+// Force layouts leave label collisions after compaction; resolve the actual
+// rendered label-and-node rectangles without shrinking the viewing scale.
+function separateLabels(cy: Core, centerId: string) {
+  const nodes = cy.nodes().toArray();
+  const gap = 18;
+  for (let pass = 0; pass < 160; pass++) {
+    let collisions = 0;
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i];
+        const b = nodes[j];
+        if (!a || !b) continue;
+        const ab = a.boundingBox({ includeLabels: true, includeOverlays: false });
+        const bb = b.boundingBox({ includeLabels: true, includeOverlays: false });
+        const dx = Math.min(ab.x2, bb.x2) - Math.max(ab.x1, bb.x1) + gap;
+        const dy = Math.min(ab.y2, bb.y2) - Math.max(ab.y1, bb.y1) + gap;
+        if (dx <= 0 || dy <= 0) continue;
+        collisions++;
+        const horizontal = dx < dy;
+        const direction = horizontal
+          ? (ab.x1 + ab.x2 <= bb.x1 + bb.x2 ? -1 : 1)
+          : (ab.y1 + ab.y2 <= bb.y1 + bb.y2 ? -1 : 1);
+        const distance = (horizontal ? dx : dy) + 1;
+        const aShare = a.id() === centerId ? 0 : b.id() === centerId ? 1 : 0.5;
+        const shift = (node: typeof a, amount: number) => {
+          const position = node.position();
+          node.position({ x: position.x + (horizontal ? amount : 0), y: position.y + (horizontal ? 0 : amount) });
+        };
+        shift(a, direction * distance * aShare);
+        shift(b, -direction * distance * (1 - aShare));
+      }
+    }
+    if (collisions === 0) break;
+  }
+}
+
 export function Graph({
   centerId,
   nodes,
@@ -54,6 +90,7 @@ export function Graph({
     let cancelled = false;
     (async () => {
       const cytoscape = (await import("cytoscape")).default;
+      await document.fonts.ready;
       if (cancelled || !ref.current) return;
       const c = {
         fg: cssVar("--foreground"),
@@ -150,8 +187,10 @@ export function Graph({
           x: (node.position().x - (bounds.x1 + bounds.w / 2)) * scale,
           y: (node.position().y - (bounds.y1 + bounds.h / 2)) * scale,
         }));
+        separateLabels(cy, centerId);
         frameMap(cy, centerId);
       } else {
+        separateLabels(cy, centerId);
         cy.viewport(previousView);
       }
       cy.on("tap", "node", (ev) => handlers.current.onTapNode(ev.target.id()));
