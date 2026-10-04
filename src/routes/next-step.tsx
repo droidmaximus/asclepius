@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { z } from "zod";
 import { Loader2, AlertTriangle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { draftProposal, explainStep } from "@/lib/ai.functions";
 import { Header, Footer } from "@/components/atlas/Header";
 import { EvidenceDrawer } from "@/components/atlas/EvidenceDrawer";
 import { GapState } from "@/components/atlas/GapState";
@@ -152,23 +153,37 @@ function NextStep() {
 function StepCard({ step: s, tier, onEvidence }: { step: Step; tier: Tier | null; onEvidence: (id: string) => void }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [cites, setCites] = useState<string[]>([]);
+  const [isFallback, setIsFallback] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [plain, setPlain] = useState<{ text: string; fallback: boolean } | null>(null);
+  const [explBusy, setExplBusy] = useState(false);
+  const draftFn = useServerFn(draftProposal);
+  const explainFn = useServerFn(explainStep);
   const draftIt = async () => {
     setBusy(true); setErr(null);
     try {
-      const { data, error } = await supabase.functions.invoke("draft-proposal", { body: { step_id: s.id, step: s } });
-      if (error) throw error;
-      const d = data as Record<string, unknown>;
-      setDraft(String(d["text"] ?? d["draft"] ?? d["message"] ?? d["body"] ?? ""));
-      const c = (d["citations"] ?? d["cited_edge_ids"] ?? []) as unknown[];
-      setCites(c.map((x) => (typeof x === "string" ? x : String((x as Record<string, unknown>)["edge_id"] ?? (x as Record<string, unknown>)["id"] ?? JSON.stringify(x)))));
+      const r = await draftFn({ data: { step_id: s.id } });
+      setDraft(r.text); setCites(r.cited_edge_ids); setIsFallback(r.fallback);
+      if (r.error) setErr(r.error);
     } catch {
-      setErr("The message drafting service is not available right now.");
+      setErr("Could not draft a message right now. Please try again.");
     } finally {
       setBusy(false);
     }
   };
+  const explainIt = async () => {
+    setExplBusy(true);
+    try {
+      const r = await explainFn({ data: { step_id: s.id } });
+      setPlain({ text: r.text, fallback: r.fallback });
+    } catch {
+      setPlain({ text: s.why ?? "", fallback: true });
+    } finally {
+      setExplBusy(false);
+    }
+  };
+  const hasExplanation = !!s.explanation?.text;
   return (
     <article className="rounded-md border p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -178,7 +193,13 @@ function StepCard({ step: s, tier, onEvidence }: { step: Step; tier: Tier | null
         </div>
         {tier && <TierBadge tier={tier} />}
       </div>
-      <p className="mt-2 text-sm leading-relaxed">{s.explanation?.text || s.why}</p>
+      <p className="mt-2 text-sm leading-relaxed">{hasExplanation ? s.explanation!.text : plain?.text || s.why}</p>
+      {!hasExplanation && !plain && (
+        <button onClick={explainIt} disabled={explBusy} className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline">
+          {explBusy && <Loader2 className="h-3 w-3 animate-spin" />} Explain in plain words
+        </button>
+      )}
+      {plain?.fallback && <p className="mt-1 text-xs text-muted-foreground">This is a plain summary of the stored reason.</p>}
       {s.differences && s.differences.length > 0 && (
         <div className="mt-3 text-sm">
           <h4 className="font-medium">What differs</h4>
@@ -210,11 +231,14 @@ function StepCard({ step: s, tier, onEvidence }: { step: Step; tier: Tier | null
       {err && <p className="mt-2 text-sm text-destructive">{err}</p>}
       {draft !== null && (
         <div className="mt-4 space-y-2">
+          {isFallback && (
+            <p className="text-xs text-muted-foreground">We could not write a checked draft, so this is a plain summary of why this step was suggested.</p>
+          )}
           <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={8} aria-label="Draft message" />
           {cites.length > 0 && (
             <div className="text-xs text-muted-foreground">
               Citations:{" "}
-              {cites.map((c) => <button key={c} onClick={() => onEvidence(c)} className="mr-2 text-primary hover:underline">{c}</button>)}
+              {cites.map((c, i) => <button key={c} onClick={() => onEvidence(c)} className="mr-3 text-primary hover:underline">Source {i + 1}</button>)}
             </div>
           )}
           <p className="text-xs text-muted-foreground">Check every claim before sending. This draft is not medical advice.</p>

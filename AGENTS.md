@@ -14,3 +14,4 @@
 - Data-driven routes (/explore, /next-step) use ssr:false because Cytoscape and on-demand queries are browser-only.
 - Graph colours come from CSS tokens resolved to rgb at runtime (Cytoscape cannot parse oklch); keep colours in src/styles.css.
 - Graph never exceeds 60 nodes (MAX_NODES); expansions add at most 12 links per click.
+- AI drafting/explaining runs in TanStack server functions (src/lib/ai.functions.ts), not Supabase Edge Functions; output is rejected (fallback to the step's `why`) unless every cited edge id belongs to the step.
