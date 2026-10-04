@@ -7,4 +7,4 @@
 - [x] Header links, keyboard access, "How to read this" modal
 
 - [x] Apply PDF-informed map/sidebar design, progressive lead details, and verify search → connections → evidence → next step.
-- [ ] Reduce initial graph crowding, improve label spacing, and verify more-connections and zoom controls.
+- [x] Reduce initial graph crowding, improve label spacing, and verify more-connections and zoom controls.
