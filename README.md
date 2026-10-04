@@ -86,6 +86,12 @@ A plain-language **How to read this** guide explains line styles and support lev
 <img src="docs/screenshots/mobile.png" alt="Mobile layout" width="220" />
 </p>
 
+### 7. The 10× case
+
+One milestone: Maria's group starts collecting natural-history data. The page compares building a new registry with joining Registry Gangliosidoses, which already names her disease. Every step is a published figure, a connection in the atlas, or a labelled assumption. The speed-up is calculated from those weeks (3.3× to 30×, about 9× at the middle), and the page lists what to validate next.
+
+<img src="docs/screenshots/impact.png" alt="The 10x case page" width="900" />
+
 ## How we keep it trustworthy
 
 | Rule | What it means |
@@ -105,6 +111,14 @@ A plain-language **How to read this** guide explains line styles and support lev
 - **1,461 nodes:** symptoms, researchers, reusable registries and studies, papers, genes, patient groups and curated pathways.
 - **2,372 connections:** 2,071 observed, 142 extracted from text with quotes, and 159 inferred.
 - **Sources:** Monarch (MONDO and HPO), ClinicalTrials.gov, PubMed, NIH RePORTER, and patient-group websites fetched through Bright Data.
+
+## Built with OpenAI
+
+| Brief | How Asclepius does it | Model |
+|---|---|---|
+| **Extract** | Reads PubMed abstracts and patient-group pages into claims and groups; each kept only if its quote is verbatim in the source | `openai/gpt-4.1-mini` via OpenRouter |
+| **Reconcile** | Resolves names the model reads (for example "GM2 activator protein deficiency") to one stable MONDO, HGNC or HPO node | `openai/gpt-4.1-mini` via OpenRouter |
+| **Explain** | Writes plain-language next steps and the "Draft a message" email, citing only connections attached to that step; drafts with clinical claims or differences not in the atlas are rejected | `openai/gpt-4.1-mini` (pipeline), `openai/gpt-oss-120b` (site) |
 
 ## Architecture
 
@@ -129,7 +143,7 @@ This repository is the **web app**. It reads the graph from Supabase with the pu
 | UI | Tailwind CSS 4, shadcn/ui (Radix) |
 | Graph | Cytoscape.js with a label-aware layout |
 | Data | Supabase (Postgres, public read-only access) |
-| AI drafting | TanStack server functions calling OpenRouter (default model `openai/gpt-oss-120b`) |
+| AI drafting | TanStack server functions calling OpenRouter (openai/gpt-oss-120b), with a clinical-claim guard and template fallback |
 
 ## Run it locally
 
@@ -148,6 +162,8 @@ The repo includes a `.env` with the Supabase URL and the **publishable** key, wh
 bun run test    # vitest
 bun run build   # production build
 ```
+
+See [docs/demo-script.md](docs/demo-script.md) for the 1-minute walkthrough.
 
 ## Roadmap
 
