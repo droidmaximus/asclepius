@@ -337,6 +337,7 @@ export const SOURCE_LABEL: Record<string, string> = {
   reporter: "NIH RePORTER",
   "nih-reporter": "NIH RePORTER",
   "infores:omim": "OMIM",
+  "monarch/infores:omim": "Monarch / OMIM",
   "curated:mechanisms.yaml": "Atlas-curated mechanism mapping",
 };
 export const sourceName = (s?: string | null) => (s ? SOURCE_LABEL[s] ?? s : "Unknown source");

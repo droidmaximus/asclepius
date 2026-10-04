@@ -165,7 +165,7 @@ function NextStep() {
   );
 }
 
-function StepCard({ step: s, tier, onEvidence, edges, sourceData, sourceError }: { step: Step; tier: Tier | null; onEvidence: (id: string) => void; edges: AtlasEdge[]; sourceData?: { evidence: Evidence[]; nodes: Map<string, AtlasNode> }; sourceError: boolean }) {
+function StepCard({ step: s, tier, onEvidence, edges, sourceData, sourceError }: { step: Step; tier: Tier | null; onEvidence: (id: string) => void; edges: AtlasEdge[]; sourceData: { evidence: Evidence[]; nodes: Map<string, AtlasNode> } | undefined; sourceError: boolean }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [cites, setCites] = useState<string[]>([]);
   const [isFallback, setIsFallback] = useState(false);

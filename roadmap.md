@@ -10,4 +10,4 @@
 - [x] Reduce initial graph crowding, improve label spacing, and verify more-connections and zoom controls.
 - [x] Keep initial map labels readable and prevent expansion or resize from automatically zooming out.
 
-- [ ] Make quotations and record-level citations explicit on evidence drawers and next-step leads.
+- [x] Make quotations and record-level citations explicit on evidence drawers and next-step leads.
