@@ -43,34 +43,43 @@ export function ResearchBackground() {
     const visibility = () => setHidden(document.hidden);
     const scroll = () => {
       const available = document.documentElement.scrollHeight - window.innerHeight;
-      input.current.scroll = available > 0 ? window.scrollY / available : 0;
+      input.current.scroll = available > 0 ? Math.max(0, Math.min(1, window.scrollY / available)) : 0;
     };
     const pointer = (event: PointerEvent) => {
-      input.current.x = event.clientX / window.innerWidth * 2 - 1;
-      input.current.y = 1 - event.clientY / window.innerHeight * 2;
+      input.current.x = Math.max(-1, Math.min(1, event.clientX / window.innerWidth * 2 - 1));
+      input.current.y = Math.max(-1, Math.min(1, 1 - event.clientY / window.innerHeight * 2));
     };
     const click = (event: MouseEvent) => {
-      if ((event.target as Element).closest("button, a, input, [role=dialog]")) return;
-      input.current.pulse += 1;
+      if (!(event.target instanceof Element) || event.target.closest("button, a, input, textarea, select, [role=dialog]")) return;
+      input.current.pulse = 1;
     };
     motion(); scroll(); visibility();
     media.addEventListener("change", motion);
     window.addEventListener("scroll", scroll, { passive: true });
+    window.addEventListener("resize", scroll, { passive: true });
     window.addEventListener("pointermove", pointer, { passive: true });
     window.addEventListener("click", click);
     document.addEventListener("visibilitychange", visibility);
     return () => {
       media.removeEventListener("change", motion);
       window.removeEventListener("scroll", scroll);
+      window.removeEventListener("resize", scroll);
       window.removeEventListener("pointermove", pointer);
       window.removeEventListener("click", click);
       document.removeEventListener("visibilitychange", visibility);
     };
   }, []);
-  useEffect(() => { input.current.scroll = 0; input.current.pulse = 0; }, [mode]);
+  useEffect(() => {
+    input.current.pulse = 0;
+    const frame = requestAnimationFrame(() => {
+      const available = document.documentElement.scrollHeight - window.innerHeight;
+      input.current.scroll = available > 0 ? Math.max(0, Math.min(1, window.scrollY / available)) : 0;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [mode]);
   if (!colors) return null;
   return <>
-    <div className={`research-background ${mode === "/" ? "is-search" : ""}`} aria-hidden="true" data-background-mode={mode} data-motion={paused || reduced ? "paused" : "active"}>
+    <div className={`research-background ${mode === "/" ? "is-search" : ""}`} aria-hidden="true" data-background-mode={mode} data-motion={paused || reduced || hidden ? "paused" : "active"}>
       <SceneBoundary><Suspense fallback={null}><ResearchScene mode={mode} colors={colors} input={input} paused={paused || reduced || hidden} /></Suspense></SceneBoundary>
     </div>
     {!reduced && <Button variant="outline" size="icon" className="research-motion-control" aria-label={paused ? "Resume background animation" : "Pause background animation"} title={paused ? "Resume background animation" : "Pause background animation"} onClick={() => setPaused(p => !p)}>

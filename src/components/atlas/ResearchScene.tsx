@@ -1,4 +1,4 @@
-import { useMemo, useRef, type RefObject } from "react";
+import { Suspense, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer } from "@react-three/drei";
 import { CatmullRomCurve3, Group, MathUtils, Vector3 } from "three";
@@ -50,30 +50,42 @@ function ResearchForms({ mode, paused, input, colors }: SceneProps) {
   const right = useRef<Group>(null);
   const time = useRef(0);
   const { viewport } = useThree();
+  // Initialise once. JSX transform props would overwrite the animated pose
+  // whenever pause, visibility, or the current page changes.
+  useLayoutEffect(() => {
+    [left.current, right.current].forEach((group, i) => {
+      if (!group) return;
+      const sign = i === 0 ? -1 : 1;
+      group.position.set(sign * viewport.width * 0.38, 0, -1 - i);
+      group.rotation.set(i === 0 ? 0.15 : -0.1, sign * 0.4, sign * 0.18);
+      group.scale.setScalar(Math.min(0.9, viewport.height / 17, viewport.width / 12));
+    });
+  }, []);
   useFrame((_, rawDelta) => {
     if (paused) return;
     const dt = Math.min(rawDelta, 0.05);
     time.current += dt;
     const smooth = 1 - Math.exp(-3 * dt);
     const { x, y, scroll, pulse } = input.current;
+    input.current.pulse *= Math.exp(-4 * dt);
     const search = mode === "/";
     [left.current, right.current].forEach((group, i) => {
       if (!group) return;
       const sign = i === 0 ? -1 : 1;
-      group.position.x = MathUtils.lerp(group.position.x, sign * viewport.width * 0.43 + (search ? x * 0.4 : 0), smooth);
-      group.position.y = MathUtils.lerp(group.position.y, Math.sin(time.current * 0.16 + i) * 0.15 + scroll * sign * 1.5 + (search ? y * 0.3 : 0), smooth);
-      group.rotation.y = MathUtils.lerp(group.rotation.y, time.current * sign * 0.025 + scroll * sign * 1.2 + (search ? x * 0.4 + pulse * 0.25 : 0), smooth);
-      group.rotation.z = MathUtils.lerp(group.rotation.z, sign * 0.25 + scroll * sign * 0.16, smooth);
-      const scale = viewport.width < 10 ? 0.65 : 0.9;
-      group.scale.setScalar(scale);
+      group.position.x = MathUtils.lerp(group.position.x, sign * viewport.width * 0.38 + (search ? x * 0.25 : 0), smooth);
+      group.position.y = MathUtils.lerp(group.position.y, Math.sin(time.current * 0.16 + i) * 0.15 + scroll * sign * 0.6 + (search ? y * 0.2 : 0), smooth);
+      group.rotation.y = MathUtils.lerp(group.rotation.y, sign * 0.4 + Math.sin(time.current * 0.12) * 0.18 + scroll * sign * 0.35 + (search ? x * 0.2 + pulse * 0.12 : 0), smooth);
+      group.rotation.z = MathUtils.lerp(group.rotation.z, sign * 0.18 + scroll * sign * 0.08, smooth);
+      const scale = Math.min(0.9, viewport.height / 17, viewport.width / 12);
+      group.scale.setScalar(MathUtils.lerp(group.scale.x, scale, smooth));
     });
   });
   const network = mode === "/explore" || mode === "/next-step";
   return <>
-    <group ref={left} position={[-viewport.width * 0.43, 0, -1]} rotation={[0.15, 0.4, -0.25]} scale={viewport.width < 10 ? 0.65 : 0.9}>
+    <group ref={left}>
       {network ? <Pathways colors={colors} /> : <Helix colors={colors} />}
     </group>
-    <group ref={right} position={[viewport.width * 0.43, 0, -2]} rotation={[-0.1, -0.5, 0.25]} scale={viewport.width < 10 ? 0.65 : 0.9}>
+    <group ref={right}>
       {mode === "/" || mode === "/next-step" ? <Helix colors={colors} /> : <Pathways colors={colors} />}
     </group>
   </>;
@@ -83,9 +95,9 @@ export default function ResearchScene(props: SceneProps) {
   return <Canvas dpr={1} camera={{ position: [0, 0, 20], fov: 42 }} frameloop={props.paused ? "demand" : "always"} gl={{ alpha: true, antialias: true }}>
     <ambientLight intensity={0.9} />
     <directionalLight position={[3, 6, 8]} intensity={1.6} color={props.colors.paper} />
-    <Environment resolution={32}>
+    <Suspense fallback={null}><Environment resolution={32}>
       <Lightformer intensity={1.5} position={[0, 4, 5]} scale={[10, 10, 1]} color={props.colors.paper} />
-    </Environment>
+    </Environment></Suspense>
     <ResearchForms {...props} />
   </Canvas>;
 }
