@@ -70,3 +70,36 @@ export function tidyDraft(text: string): string {
     .replace(/[ \t]*\n[ \t]*/g, "\n")
     .trim();
 }
+
+/** Model reply as an object: strips code fences, then falls back to the first {...} span when prose surrounds it. */
+export function parseJsonReply(raw: string): Record<string, unknown> | null {
+  const asObject = (s: string) => {
+    try {
+      const v: unknown = JSON.parse(s);
+      return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  };
+  const unfenced = raw.trim().replace(/^```(?:json)?\s*|\s*```$/gi, "").trim();
+  const direct = asObject(unfenced);
+  if (direct) return direct;
+  for (let start = unfenced.indexOf("{"); start >= 0; start = unfenced.indexOf("{", start + 1)) {
+    let depth = 0;
+    let inString = false;
+    for (let i = start; i < unfenced.length; i++) {
+      const c = unfenced[i];
+      if (inString) {
+        if (c === "\\") i++;
+        else if (c === '"') inString = false;
+      } else if (c === '"') inString = true;
+      else if (c === "{") depth++;
+      else if (c === "}" && --depth === 0) {
+        const found = asObject(unfenced.slice(start, i + 1));
+        if (found) return found;
+        break;
+      }
+    }
+  }
+  return null;
+}

@@ -116,9 +116,9 @@ One milestone: Maria's group starts collecting natural-history data. The page co
 
 | Brief | How Asclepius does it | Model |
 |---|---|---|
-| **Extract** | Reads PubMed abstracts and patient-group pages into claims and groups; each kept only if its quote is verbatim in the source | `openai/gpt-4.1-mini` via OpenRouter |
-| **Reconcile** | Resolves names the model reads (for example "GM2 activator protein deficiency") to one stable MONDO, HGNC or HPO node | `openai/gpt-4.1-mini` via OpenRouter |
-| **Explain** | Writes plain-language next steps and the "Draft a message" email, citing only connections attached to that step; drafts with clinical claims, or differences, not backed by the atlas are rejected | `openai/gpt-4.1-mini` (pipeline), `openai/gpt-oss-120b` (site) |
+| **Extract** | Reads PubMed abstracts and patient-group pages into claims and groups; each kept only if its quote is verbatim in the source | `openai/gpt-4.1-mini` via OpenRouter (default); the published bundle was built with Claude Haiku 4.5, recorded in `meta.llm` |
+| **Reconcile** | Resolves names the model reads (for example "GM2 activator protein deficiency") to one stable MONDO, HGNC or HPO node | `openai/gpt-4.1-mini` via OpenRouter (default); the published bundle was built with Claude Haiku 4.5, recorded in `meta.llm` |
+| **Explain** | Writes plain-language next steps and the "Draft a message" email, citing only connections attached to that step; drafts with clinical claims, or differences, not backed by the atlas are rejected | `openai/gpt-oss-120b` via OpenRouter on the live site; Claude Haiku 4.5 when only `ANTHROPIC_API_KEY` is set (local testing) |
 
 ## Architecture
 
@@ -143,7 +143,7 @@ This repository is the **web app**. It reads the graph from Supabase with the pu
 | UI | Tailwind CSS 4, shadcn/ui (Radix) |
 | Graph | Cytoscape.js with a label-aware layout |
 | Data | Supabase (Postgres, public read-only access) |
-| AI drafting | TanStack server functions calling OpenRouter (openai/gpt-oss-120b), with a clinical-claim guard and template fallback |
+| AI drafting | TanStack server functions calling OpenRouter (openai/gpt-oss-120b), with a Claude fallback for local runs, a clinical-claim guard and template fallback |
 
 ## Run it locally
 
@@ -156,7 +156,7 @@ bun install
 bun run dev
 ```
 
-The repo includes a `.env` with the Supabase URL and the **publishable** key, which is read-only by design. To enable **Draft a message**, set `OPENROUTER_API_KEY` (and optionally `OPENROUTER_MODEL`) on the server.
+The repo includes a `.env` with the Supabase URL and the **publishable** key, which is read-only by design. To enable **Draft a message**, set `OPENROUTER_API_KEY` (and optionally `OPENROUTER_MODEL`) on the server. For local testing without OpenRouter, leave `OPENROUTER_API_KEY` unset and set `ANTHROPIC_API_KEY` (and optionally `ANTHROPIC_MODEL`, default `claude-haiku-4-5-20251001`); the server then drafts with Claude.
 
 ```sh
 bun run test    # vitest

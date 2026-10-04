@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { claimsUnstoredDifference, templateDraft, tidyDraft, unsupportedClinicalTerms } from "@/lib/draft-guard";
+import { claimsUnstoredDifference, parseJsonReply, templateDraft, tidyDraft, unsupportedClinicalTerms } from "@/lib/draft-guard";
 
 const DRAFT_PROMPT =
   'You help a rare-disease patient group leader write a short, polite first message to the owner of a registry or study. State only facts from the listed connections and the Known differences; make no other medical or clinical statements (nothing about age of onset, severity, progression or prognosis unless those words appear in the facts). Do not promise a treatment and do not give medical advice. Mention what the sender hopes to reuse, one Known difference (or, if none are listed, say that how the diseases differ still needs to be checked with the study team), and one question for the study team. At most 150 words. Reply as JSON: {"text": string, "cited_edge_ids": [string]}. Cite every edge id whose fact you use.';
@@ -16,6 +16,63 @@ export interface AiResult {
 
 type Step = { id: string; title?: string; why?: string; edge_ids?: string[]; differences?: string[]; review_questions?: string[] };
 type Edge = { id: string; source_id: string; target_id: string; type: string; source: string; evidence_type: string; confidence: number; tier: string };
+type Reply = { ok: true; raw: string } | { ok: false; status?: number };
+type Complete = (system: string, user: string) => Promise<Reply>;
+
+/** OpenRouter when its key is set (the live site); otherwise Claude for local testing; otherwise null. */
+function completer(): Complete | null {
+  const openrouterKey = process.env["OPENROUTER_API_KEY"];
+  if (openrouterKey) {
+    const model = process.env["OPENROUTER_MODEL"] || "openai/gpt-oss-120b";
+    return (system, user) =>
+      post("openrouter", "https://openrouter.ai/api/v1/chat/completions",
+        { Authorization: `Bearer ${openrouterKey}`, "Content-Type": "application/json", "X-Title": "Asclepius" },
+        {
+          model,
+          temperature: 0,
+          response_format: { type: "json_object" },
+          reasoning: { effort: "low", exclude: true },
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+        },
+        (body) => (body as { choices?: { message?: { content?: string } }[] }).choices?.[0]?.message?.content ?? "");
+  }
+  const anthropicKey = process.env["ANTHROPIC_API_KEY"];
+  if (anthropicKey) {
+    const model = process.env["ANTHROPIC_MODEL"] || "claude-haiku-4-5-20251001";
+    return (system, user) =>
+      post("anthropic", "https://api.anthropic.com/v1/messages",
+        { "x-api-key": anthropicKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+        {
+          model,
+          max_tokens: 1000,
+          system: system + "\n\nReply with a single JSON object and nothing else.",
+          messages: [{ role: "user", content: user }],
+        },
+        (body) => ((body as { content?: { type?: string; text?: string }[] }).content ?? [])
+          .filter((b) => b.type === "text" && typeof b.text === "string")
+          .map((b) => b.text)
+          .join(""));
+  }
+  return null;
+}
+
+async function post(provider: string, url: string, headers: Record<string, string>, body: unknown, read: (body: unknown) => string): Promise<Reply> {
+  let res: Response;
+  try {
+    res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+  } catch (e) {
+    console.error(`${provider} fetch failed`, e);
+    return { ok: false };
+  }
+  if (!res.ok) {
+    console.error(`${provider} error`, res.status, await res.text().catch(() => ""));
+    return { ok: false, status: res.status };
+  }
+  return { ok: true, raw: read(await res.json()) };
+}
 
 async function run(stepId: string, systemPrompt: string, mode: "draft" | "explain"): Promise<AiResult> {
   const withQuotes = mode === "draft";
@@ -64,47 +121,29 @@ async function run(stepId: string, systemPrompt: string, mode: "draft" | "explai
     ...quotes,
   ].filter(Boolean).join("\n");
 
-  const key = process.env["OPENROUTER_API_KEY"];
-  const model = process.env["OPENROUTER_MODEL"] || "openai/gpt-oss-120b";
   const draftFallback = (error?: string): AiResult =>
     mode === "draft"
       ? { text: templateDraft(step), cited_edge_ids: [...allowed], fallback: true, ...(error ? { error } : {}) }
       : fallback(error);
-  if (!key) return draftFallback("AI is not configured.");
+  const complete = completer();
+  if (!complete) return draftFallback("AI is not configured.");
+  const system = systemPrompt + " Never write edge ids such as E1 inside text; list them only in cited_edge_ids. Output only that JSON object with exactly the keys text and cited_edge_ids; no analysis or other keys.";
 
   let retryNote = "";
 
   for (let attempt = 0; attempt < 2; attempt++) {
-    let res: Response;
-    try {
-      res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Title": "Asclepius" },
-        body: JSON.stringify({
-          model,
-          temperature: 0,
-          response_format: { type: "json_object" },
-          reasoning: { effort: "low", exclude: true },
-          messages: [
-            { role: "system", content: systemPrompt + " Never write edge ids such as E1 inside text; list them only in cited_edge_ids. Output only that JSON object with exactly the keys text and cited_edge_ids; no analysis or other keys." },
-            { role: "user", content: user + retryNote },
-          ],
-        }),
-      });
-    } catch (e) {
-      console.error("openrouter fetch failed", e);
-      return draftFallback("The AI service could not be reached.");
+    const reply = await complete(system, user + retryNote);
+    if (!reply.ok) {
+      return draftFallback(
+        reply.status === undefined ? "The AI service could not be reached."
+          : reply.status === 429 ? "The AI service is busy. Try again in a minute."
+          : reply.status === 402 ? "The AI account is out of credit."
+          : "The AI service returned an error.",
+      );
     }
-    if (!res.ok) {
-      console.error("openrouter error", res.status, await res.text().catch(() => ""));
-      return draftFallback(res.status === 429 ? "The AI service is busy. Try again in a minute." : res.status === 402 ? "The AI account is out of credit." : "The AI service returned an error.");
-    }
-    const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    const raw = body.choices?.[0]?.message?.content ?? "";
-    let parsed: { text?: unknown; cited_edge_ids?: unknown };
-    try {
-      parsed = JSON.parse(raw.replace(/^```(json)?|```$/g, "").trim());
-    } catch {
+    const raw = reply.raw;
+    const parsed: { text?: unknown; cited_edge_ids?: unknown } | null = parseJsonReply(raw);
+    if (!parsed) {
       console.warn("ai output not json", { stepId, raw: raw.slice(0, 500) });
       return draftFallback();
     }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { claimsUnstoredDifference, templateDraft, tidyDraft, unsupportedClinicalTerms } from "@/lib/draft-guard";
+import { claimsUnstoredDifference, parseJsonReply, templateDraft, tidyDraft, unsupportedClinicalTerms } from "@/lib/draft-guard";
 
 const step = {
   title: "Ask SphinCS Lyso Gemeinnutzige UG (Haftungsbeschrankt) about reusing Registry Gangliosidoses",
@@ -69,5 +69,19 @@ describe("Draft guard", () => {
     expect(claimsUnstoredDifference("How the diseases differ still needs to be checked with the study team.", false)).toBe(false);
     expect(claimsUnstoredDifference("The main difference from our disease still needs to be checked.", false)).toBe(false);
     expect(claimsUnstoredDifference("We are interested in reusing the registry.", false)).toBe(false);
+  });
+});
+
+describe("parseJsonReply", () => {
+  it("reads plain and fenced JSON", () => {
+    expect(parseJsonReply('{"text":"Hi","cited_edge_ids":["E1"]}')).toEqual({ text: "Hi", cited_edge_ids: ["E1"] });
+    expect(parseJsonReply('```json\n{"text":"Hi"}\n```')).toEqual({ text: "Hi" });
+  });
+  it("finds the object inside surrounding prose, ignoring braces in strings", () => {
+    expect(parseJsonReply('Here is the draft:\n{"text":"a } b {","cited_edge_ids":[]}\nHope it helps {ok}.')).toEqual({ text: "a } b {", cited_edge_ids: [] });
+  });
+  it("returns null when there is no object", () => {
+    expect(parseJsonReply("Sorry, I cannot help.")).toBeNull();
+    expect(parseJsonReply('["E1"]')).toBeNull();
   });
 });
