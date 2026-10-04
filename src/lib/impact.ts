@@ -65,7 +65,7 @@ export const IMPACT = {
         minWeeks: 0,
         maxWeeks: 1,
         basis: "atlas",
-        detail: "Registry Gangliosidoses (NCT04624789) lists Tay-Sachs disease AB variant, the ontology name for GM2 activator deficiency. Found in one search; up to a week to review it with an expert.",
+        detail: "Registry Gangliosidoses (NCT04624789) lists Tay-Sachs disease AB variant, the ontology name for GM2 activator deficiency. Found in one search; up to a week to review it with an expert. The week to review it is our assumption.",
         edgeId: REGISTRY_EDGE,
       },
       {

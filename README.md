@@ -102,7 +102,7 @@ One milestone: Maria's group starts collecting natural-history data. The page co
 | **Contradictions stay visible** | Evidence against a connection is stored beside it and lowers its support level. |
 | **Similar looks ≠ same cause** | Symptom similarity and shared mechanism are scored separately, and counterexamples are shown on purpose. |
 | **Gaps are stated** | When no supported route exists, the app says so and lists the sources it searched. |
-| **AI text is validated** | Drafted messages are rejected unless every cited connection belongs to that lead. Rejected drafts fall back to the stored summary. |
+| **AI text is validated** | Drafted messages are rejected unless every cited connection belongs to that lead and every clinical term in them appears in the stored facts. For a lead with no stored difference, a draft that claims one is also rejected. A draft with unsupported terms gets one retry; a draft still rejected is replaced by a message built only from the stored step data. |
 | **Not medical advice** | The app never promises a treatment, and every page says so. |
 
 ## What's in the atlas
@@ -118,7 +118,7 @@ One milestone: Maria's group starts collecting natural-history data. The page co
 |---|---|---|
 | **Extract** | Reads PubMed abstracts and patient-group pages into claims and groups; each kept only if its quote is verbatim in the source | `openai/gpt-4.1-mini` via OpenRouter |
 | **Reconcile** | Resolves names the model reads (for example "GM2 activator protein deficiency") to one stable MONDO, HGNC or HPO node | `openai/gpt-4.1-mini` via OpenRouter |
-| **Explain** | Writes plain-language next steps and the "Draft a message" email, citing only connections attached to that step; drafts with clinical claims or differences not in the atlas are rejected | `openai/gpt-4.1-mini` (pipeline), `openai/gpt-oss-120b` (site) |
+| **Explain** | Writes plain-language next steps and the "Draft a message" email, citing only connections attached to that step; drafts with clinical claims, or differences, not backed by the atlas are rejected | `openai/gpt-4.1-mini` (pipeline), `openai/gpt-oss-120b` (site) |
 
 ## Architecture
 

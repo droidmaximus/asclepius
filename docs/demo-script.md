@@ -2,7 +2,7 @@
 
 ## 1-minute walkthrough
 
-Record at 1440×900 on https://asclepius.avinash.social. About 150 spoken words.
+Record at 1440×900 on https://asclepius.avinash.social. About 120 spoken words.
 
 | Time | On screen | Say |
 |---|---|---|
@@ -10,7 +10,7 @@ Record at 1440×900 on https://asclepius.avinash.social. About 150 spoken words.
 | 0:08–0:16 | Type "GM2 activator deficiency", pick the result | "One search box. Her name for the disease resolves to the ontology's: Tay-Sachs disease AB variant." |
 | 0:16–0:26 | Connections map; point at Sandhoff and Tay-Sachs in the left rail | "The map shows its genes, symptoms, studies and groups. Neighbours are ranked by shared, specific symptoms." |
 | 0:26–0:36 | Click the line to Registry Gangliosidoses; evidence panel opens | "Every line says where it came from, when, and how strong it is. Text-mined links carry the exact quote." |
-| 0:36–0:46 | Your next step; click Draft a message | "Her next step: a registry that already names her disease. The draft states only facts in the atlas." |
+| 0:36–0:46 | Your next step; click Draft a message | "Her next step: a registry that already names her disease. The draft is checked against the atlas, and clinical claims it can't back up are removed." |
 | 0:46–0:56 | 10× case page | "Joining it instead of building one is three to thirty times faster, about nine at the middle. Every number is sourced or labelled." |
 | 0:56–1:00 | Counterexamples tab | "And it shows look-alikes that aren't. Built with OpenAI models." |
 

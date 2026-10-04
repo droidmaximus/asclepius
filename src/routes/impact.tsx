@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { ANCHOR, IMPACT, routeWeeks, speedup, type Basis, type RouteStep } from "@/lib/impact";
 
 const TITLE = "The 10× case — Asclepius";
-const DESC = "How finding an existing registry could shorten the first step toward treatment for GM2 activator deficiency, with every number sourced or labelled as an assumption.";
+const DESC = "How finding an existing registry could shorten the first step toward a natural-history study of GM2 activator deficiency, with every number sourced or labelled as an assumption.";
 
 export const Route = createFileRoute("/impact")({
   head: () => ({
