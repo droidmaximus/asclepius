@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import type { Core } from "cytoscape";
 import type { AtlasEdge, AtlasNode } from "@/lib/atlas";
 import { TYPE_TOKEN } from "./Legend";
+import { Button } from "@/components/ui/button";
+import { ZoomIn, ZoomOut, Scan } from "lucide-react";
 
 // Cytoscape cannot parse oklch, so resolve tokens to rgb via a canvas.
 function cssVar(name: string) {
@@ -54,18 +56,19 @@ export function Graph({
       };
       const typeColor: Record<string, string> = {};
       for (const [t, v] of Object.entries(TYPE_TOKEN)) typeColor[t] = cssVar(v);
-      const maxLevel = Math.max(1, ...Object.values(level));
+      const previous = cyRef.current;
+      const positions = new Map(previous?.nodes().map((n) => [n.id(), n.position()] as const) ?? []);
       const cy = cytoscape({
         container: ref.current,
         elements: [
           ...nodes.map((n) => ({
             data: {
               id: n.id,
-              label: n.label.length > 30 ? n.label.slice(0, 28) + "…" : n.label,
+              label: n.label,
               color: typeColor[n.type] ?? c.fg,
               center: n.id === centerId ? 1 : 0,
-              ring: maxLevel + 1 - (level[n.id] ?? 1),
             },
+            position: positions.get(n.id),
           })),
           ...edges.map((e) => ({
             data: {
@@ -82,44 +85,58 @@ export function Graph({
           {
             selector: "node",
             style: {
-              width: 14,
-              height: 14,
+              width: 22,
+              height: 22,
               "background-color": "data(color)",
               "border-width": 2,
               "border-color": c.bg,
               label: "data(label)",
-              "font-size": 9,
+              "font-size": 14,
               color: c.fg,
               "text-valign": "bottom",
-              "text-margin-y": 3,
+              "text-margin-y": 8,
               "text-wrap": "wrap",
-              "text-max-width": "100px",
+              "text-max-width": "145px",
+              "text-background-color": c.bg,
+              "text-background-opacity": 0.9,
+              "text-background-padding": "3px",
+              "text-background-shape": "roundrectangle",
               "font-family": "IBM Plex Sans, sans-serif",
             },
           },
-          { selector: "node[center = 1]", style: { width: 32, height: 32, "font-size": 12, "font-weight": 600 as never, "border-color": c.high, "border-width": 3 } },
+          { selector: "node[center = 1]", style: { width: 38, height: 38, "font-size": 16, "font-weight": 600 as never, "border-color": c.high, "border-width": 3 } },
           { selector: "node:selected", style: { "border-color": c.high, "border-width": 3 } },
-          { selector: "edge", style: { width: 1.4, "curve-style": "bezier", "line-color": c.low } },
+          { selector: "edge", style: { width: 1.4, "curve-style": "bezier", "line-color": c.low, opacity: 0.55 } },
           { selector: "edge[tier = 'high']", style: { "line-color": c.high, width: 2.2 } },
           { selector: "edge[tier = 'medium']", style: { "line-color": c.medium, width: 1.8 } },
           { selector: "edge[ev = 'inferred']", style: { "line-style": "dashed" } },
           { selector: "edge[ev = 'extracted']", style: { "line-style": "dotted", width: 2.4 } },
           { selector: "edge[contra = 1]", style: { "line-color": c.bad } },
-          { selector: "edge.sel", style: { width: 4.5, "z-index": 10 } },
+          { selector: "edge.sel", style: { width: 4.5, "z-index": 10, opacity: 1 } },
         ],
         layout: {
-          name: "concentric",
-          concentric: (n: { data: (k: string) => number }) => (n.data("center") ? 100 : n.data("ring")),
-          levelWidth: () => 1,
-          minNodeSpacing: 18,
+          name: "cose",
+          nodeDimensionsIncludeLabels: true,
+          randomize: positions.size === 0,
+          nodeRepulsion: () => 16000,
+          idealEdgeLength: () => 140,
+          edgeElasticity: () => 80,
+          gravity: 0.15,
+          numIter: 1000,
+          padding: 36,
           animate: false,
         } as never,
         minZoom: 0.3,
-        maxZoom: 1.4,
+        maxZoom: 3,
         wheelSensitivity: 0.2,
       });
       cy.on("tap", "node", (ev) => handlers.current.onTapNode(ev.target.id()));
       cy.on("tap", "edge", (ev) => handlers.current.onSelectEdge(ev.target.id()));
+      cy.on("mouseover", "node", (ev) => {
+        cy.elements().style("opacity", 0.2);
+        ev.target.closedNeighborhood().style("opacity", 1);
+      });
+      cy.on("mouseout", "node", () => cy.elements().removeStyle("opacity"));
       cyRef.current = cy;
     })();
     return () => {
@@ -136,5 +153,16 @@ export function Graph({
 
   useEffect(() => () => cyRef.current?.destroy(), []);
 
-  return <div ref={ref} className="h-full w-full" aria-label="Map of connections. Use the list on the right to browse with the keyboard." role="img" />;
+  const zoom = (factor: number) => {
+    const cy = cyRef.current;
+    if (cy) cy.zoom({ level: cy.zoom() * factor, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
+  };
+  return <>
+    <div ref={ref} className="h-full w-full" aria-label="Map of connections" role="img" />
+    <div className="absolute bottom-3 right-3 flex gap-1 rounded-md border bg-background p-1">
+      <Button variant="ghost" size="icon" aria-label="Zoom in" title="Zoom in" onClick={() => zoom(1.25)}><ZoomIn /></Button>
+      <Button variant="ghost" size="icon" aria-label="Zoom out" title="Zoom out" onClick={() => zoom(0.8)}><ZoomOut /></Button>
+      <Button variant="ghost" size="icon" aria-label="Fit map" title="Fit map" onClick={() => cyRef.current?.fit(undefined, 36)}><Scan /></Button>
+    </div>
+  </>;
 }

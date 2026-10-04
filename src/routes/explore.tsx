@@ -18,6 +18,7 @@ import {
   MECH_LABEL,
   REL_LABEL,
   TYPE_LABEL,
+  MAX_NODES,
   expandNode,
   fetchMeta,
   fetchNeighborhood,
@@ -78,7 +79,7 @@ function Explore() {
 
   const tapNode = async (id: string) => {
     setSelected(id);
-    if (!graph || id === centerId) return;
+    if (!graph || expanding) return;
     setExpanding(id);
     try {
       const g = await expandNode(graph, id, showWeak);
@@ -134,6 +135,11 @@ function Explore() {
               <label className="flex items-center gap-2 text-foreground">
                 <Switch checked={showWeak} onCheckedChange={setShowWeak} aria-label="Show weaker links" /> Show weaker links
               </label>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="outline" size="sm" onClick={() => centerId && tapNode(centerId)} disabled={!graph || !!expanding || graph.nodes.length >= MAX_NODES || graph.hiddenOver === 0}>More connections</Button>
+              {graph && graph.hiddenOver > 0 && <span className="text-xs text-muted-foreground">{graph.hiddenOver} more direct links available</span>}
+              {graph && graph.nodes.length >= MAX_NODES && <span className="text-xs text-muted-foreground">Map limit reached. Put another item at the centre.</span>}
             </div>
             {isGap && <GapState actions={actions} />}
             {base.error && <p className="text-sm text-destructive">Could not load connections. Please refresh.</p>}
