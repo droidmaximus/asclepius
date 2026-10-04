@@ -33,7 +33,7 @@ export function recordSources(edge: AtlasEdge, nodes: Map<string, AtlasNode>) {
     const node = nodes.get(id);
     if (!node) return [];
     const p = node.props ?? {};
-    const raw = p.url ?? p.website ?? p.source_url;
+    const raw = p["url"] ?? p["website"] ?? p["source_url"];
     const url = safeSourceUrl(typeof raw === "string" ? raw : null);
     return url ? [{ node, url }] : [];
   });

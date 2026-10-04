@@ -231,7 +231,7 @@ function StepCard({ step: s, tier, onEvidence, edges, sourceData, sourceError }:
               <h4 className="break-words font-sans text-sm font-semibold">{connectionLabel(edge)}</h4>
               <p className="text-xs text-muted-foreground">{sourceName(edge.source)} · {edge.evidence_type === "inferred" ? "Suggested connection, not proven" : edge.evidence_type === "extracted" ? "Read from a source by AI" : "Database connection"} · retrieved {citationDate(edge.retrieved_at)}</p>
               <SourceEvidence edge={edge} evidence={sourceData.evidence.filter((e) => e.edge_id === edge.id || (edge.evidence_ids ?? []).includes(e.id) || (edge.contradicts ?? []).includes(e.id))} nodes={sourceData.nodes} />
-            </>)}
+            </section>)}
           </>}
         </div>
       </details>

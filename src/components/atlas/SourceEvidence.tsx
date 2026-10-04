@@ -6,7 +6,7 @@ export function SourceQuote({ evidence: e, nodes, against = false }: { evidence:
   const url = safeSourceUrl(e.url);
   const id = sourceRecordId(url);
   const paper = id ? nodes.get(id) : undefined;
-  const year = paper?.props?.year;
+  const year = paper?.props?.["year"];
   return (
     <figure className={`min-w-0 border-l-2 pl-4 ${against ? "border-contradict" : "border-primary"}`}>
       <p className="mb-2 text-xs font-medium text-muted-foreground">{e.quote ? "Quoted passage · as stored in the atlas" : "No quoted passage supplied"}</p>
