@@ -89,7 +89,10 @@ function NextStep() {
             <h1 className="mt-3 max-w-4xl text-3xl leading-snug md:text-4xl">{name}</h1>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <p className="text-muted-foreground">For {name}, we found {leads} reusable research {leads === 1 ? "lead" : "leads"} you could ask about.</p>
-              {anchor && <Button variant="outline" onClick={() => navigate({ to: "/explore", search: { node: anchor } })}><ArrowUpRight /> Explore connections</Button>}
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => navigate({ to: "/impact" })}><ArrowUpRight /> The 10× case</Button>
+                {anchor && <Button variant="outline" onClick={() => navigate({ to: "/explore", search: { node: anchor } })}><ArrowUpRight /> Explore connections</Button>}
+              </div>
             </div>
             {edgesQ.error && <p className="mt-2 text-sm text-destructive">Could not load confidence for some cards.</p>}
 

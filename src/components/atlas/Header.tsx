@@ -14,6 +14,7 @@ export function Header({ children }: { children?: React.ReactNode }) {
           <Link to="/" className={link} activeOptions={{ exact: true }} activeProps={{ className: "text-foreground font-medium" }}>Search</Link>
           <Link to="/explore" className={link} activeProps={{ className: "text-foreground font-medium" }}>Connections</Link>
           <Link to="/next-step" className={link} activeProps={{ className: "text-foreground font-medium" }}>Your next step</Link>
+          <Link to="/impact" className={link} activeProps={{ className: "text-foreground font-medium" }}>10× case</Link>
           <HowToRead className={link} />
         </nav>
         {children && <div className="w-full md:ml-auto md:w-auto md:min-w-[420px] md:max-w-xl md:flex-1">{children}</div>}

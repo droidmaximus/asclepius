@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as ImpactRouteImport } from './routes/impact'
 import { Route as NextStepRouteImport } from './routes/next-step'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const ExploreRoute = ExploreRouteImport.update({
   path: '/explore',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ImpactRoute = ImpactRouteImport.update({
+  id: '/impact',
+  path: '/impact',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NextStepRoute = NextStepRouteImport.update({
   id: '/next-step',
   path: '/next-step',
@@ -32,30 +38,34 @@ const NextStepRoute = NextStepRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/explore': typeof ExploreRoute
+  '/impact': typeof ImpactRoute
   '/next-step': typeof NextStepRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/explore': typeof ExploreRoute
+  '/impact': typeof ImpactRoute
   '/next-step': typeof NextStepRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/explore': typeof ExploreRoute
+  '/impact': typeof ImpactRoute
   '/next-step': typeof NextStepRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/explore' | '/next-step'
+  fullPaths: '/' | '/explore' | '/impact' | '/next-step'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/explore' | '/next-step'
-  id: '__root__' | '/' | '/explore' | '/next-step'
+  to: '/' | '/explore' | '/impact' | '/next-step'
+  id: '__root__' | '/' | '/explore' | '/impact' | '/next-step'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ExploreRoute: typeof ExploreRoute
+  ImpactRoute: typeof ImpactRoute
   NextStepRoute: typeof NextStepRoute
 }
 
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExploreRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/impact': {
+      id: '/impact'
+      path: '/impact'
+      fullPath: '/impact'
+      preLoaderRoute: typeof ImpactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/next-step': {
       id: '/next-step'
       path: '/next-step'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ExploreRoute: ExploreRoute,
+  ImpactRoute: ImpactRoute,
   NextStepRoute: NextStepRoute,
 }
 export const routeTree = rootRouteImport

@@ -15,3 +15,13 @@ describe("App routing", () => {
     expect(matches.at(-1)?.routeId).not.toBe(rootRouteId);
   });
 });
+
+describe("The 10x case page", () => {
+  it("matches a page for /impact", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+
+    const matches = router.matchRoutes("/impact");
+
+    expect(matches.at(-1)?.routeId).toBe("/impact");
+  });
+});
