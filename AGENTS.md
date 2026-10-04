@@ -15,3 +15,5 @@
 - Graph colours come from CSS tokens resolved to rgb at runtime (Cytoscape cannot parse oklch); keep colours in src/styles.css.
 - Graph never exceeds 60 nodes (MAX_NODES); expansions add at most 12 links per click.
 - AI drafting/explaining runs in TanStack server functions (src/lib/ai.functions.ts), not Supabase Edge Functions; output is rejected (fallback to the step's `why`) unless every cited edge id belongs to the step.
+
+- Atlas presentation uses a two-column context rail and map/content surface; preserve source-backed content and existing read-only flows when changing layout.

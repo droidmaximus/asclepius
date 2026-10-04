@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Search } from "@/components/atlas/Search";
 import { Header, Footer } from "@/components/atlas/Header";
 
@@ -41,13 +42,13 @@ function Home() {
           </div>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             {EXAMPLES.map((e) => (
-              <button
+              <Button variant="outline" size="sm"
                 key={e}
                 onClick={() => setPreset(e)}
                 className="rounded-full border px-3 py-1 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
               >
                 {e}
-              </button>
+              </Button>
             ))}
           </div>
         </div>

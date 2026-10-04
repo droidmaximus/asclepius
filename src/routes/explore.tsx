@@ -2,13 +2,14 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { ExternalLink, Loader2 } from "lucide-react";
+import { ExternalLink, Loader2, PanelLeftClose, PanelLeftOpen, Network } from "lucide-react";
 import { Graph } from "@/components/atlas/Graph";
 import { Search } from "@/components/atlas/Search";
 import { Header, Footer } from "@/components/atlas/Header";
 import { EvidenceDrawer } from "@/components/atlas/EvidenceDrawer";
 import { GapState } from "@/components/atlas/GapState";
 import { Legend, TierDot, TypeDot } from "@/components/atlas/Legend";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -55,10 +56,11 @@ function Explore() {
   const anchor = metaQ.data?.actions?.anchor ?? metaQ.data?.anchor;
   const centerId = search.node ?? anchor;
   const [showWeak, setShowWeak] = useState(false);
+  const [contextOpen, setContextOpen] = useState(true);
 
   const base = useQuery({
     queryKey: ["hood", centerId, showWeak],
-    queryFn: () => fetchNeighborhood(centerId!, showWeak),
+    queryFn: () => centerId ? fetchNeighborhood(centerId, showWeak) : Promise.resolve(null),
     enabled: !!centerId,
   });
   const [graph, setGraph] = useState<GraphData | null>(null);
@@ -101,15 +103,24 @@ function Explore() {
     <div className="flex min-h-screen flex-col bg-background">
       <Header><Search onPick={openNode} /></Header>
 
-      <main className="mx-auto grid w-full max-w-[1500px] flex-1 grid-cols-1 lg:grid-cols-[340px_1fr_380px]">
-        <aside className="order-2 border-b p-5 lg:order-1 lg:max-h-[calc(100vh-65px)] lg:overflow-auto lg:border-b-0 lg:border-r">
+      <main className={`atlas-workspace flex-1 ${contextOpen ? "" : "is-collapsed"}`}>
+        <aside className="atlas-context">
+          <div className="mb-6 flex items-center justify-between gap-2">
+            {contextOpen && <h2 className="font-sans text-xs font-semibold uppercase text-primary">Research maps</h2>}
+            <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setContextOpen(!contextOpen)} aria-label={contextOpen ? "Collapse context" : "Show context"} title={contextOpen ? "Collapse context" : "Show context"}>
+              {contextOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
+            </Button>
+          </div>
+          {contextOpen && <div>
           {metaQ.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
           {metaQ.error && <p className="text-sm text-destructive">Could not load the atlas summary. Please refresh.</p>}
           {metaQ.data && <ClusterPanel meta={metaQ.data} onOpenNode={openNode} />}
+          {detailNode && graph && <section className="mt-6"><NodeDetail node={detailNode} isCenter={detailNode.id === centerId} edges={graph.edges} nodes={nodeMap} onEdge={openEdge} onCenter={openNode} /></section>}
+          </div>}
         </aside>
 
-        <section className="order-1 flex flex-col border-b lg:order-2 lg:border-b-0">
-          <div className="space-y-3 px-5 pt-5">
+        <section className="min-w-0 flex flex-col">
+          <div className="atlas-map-heading space-y-4">
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">{center ? TYPE_LABEL[center.type] ?? center.type : "\u00a0"}</p>
               <h1 className="text-3xl leading-tight">{center?.label ?? (base.isLoading || metaQ.isLoading ? "Loading map…" : "Not found")}</h1>
@@ -118,7 +129,7 @@ function Explore() {
               <span>
                 {graph && `${graph.nodes.length} items, ${graph.edges.length} links shown.`}
                 {graph && graph.hiddenWeak > 0 && ` ${graph.hiddenWeak} weaker links hidden.`}
-                {" "}Click a dot to add its neighbours, or a line to see where it came from.
+                
               </span>
               <label className="flex items-center gap-2 text-foreground">
                 <Switch checked={showWeak} onCheckedChange={setShowWeak} aria-label="Show weaker links" /> Show weaker links
@@ -129,7 +140,7 @@ function Explore() {
             {base.data === null && <p className="text-sm text-muted-foreground">That item is not in the atlas.</p>}
             {graph && graph.edges.length === 0 && !isGap && <GapState actions={actions} missing="No links to this item were found with this filter. Try “Show weaker links”." />}
           </div>
-          <div className="relative h-[60vh] min-h-[380px] lg:h-[calc(100vh-280px)]">
+          <div className="atlas-map-surface">
             {(base.isLoading || expanding) && (
               <p className="absolute right-4 top-3 z-10 flex items-center gap-1 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading links…</p>
             )}
@@ -138,14 +149,10 @@ function Explore() {
               <Graph centerId={centerId} nodes={graph.nodes} edges={graph.edges} level={graph.level} selectedEdgeId={search.edge} onTapNode={tapNode} onSelectEdge={openEdge} />
             )}
           </div>
-          <div className="border-t px-5 py-3"><Legend /></div>
+          <div className="mx-5 border-t py-4 lg:mx-9"><Legend /></div>
+          {anchor && <div className="mx-5 mb-8 flex items-center gap-3 border-t pt-5 lg:mx-9"><Network className="h-5 w-5 text-primary" /><Button variant="link" className="h-auto whitespace-normal p-0 text-left" onClick={() => navigate({ to: "/next-step" })}>Reusable research and people for your next step →</Button></div>}
         </section>
 
-        <aside className="order-3 p-5 lg:max-h-[calc(100vh-65px)] lg:overflow-auto lg:border-l">
-          {detailNode && graph && (
-            <NodeDetail node={detailNode} isCenter={detailNode.id === centerId} edges={graph.edges} nodes={nodeMap} onEdge={openEdge} onCenter={openNode} />
-          )}
-        </aside>
       </main>
       <Footer />
       <EvidenceDrawer edgeId={search.edge} onClose={() => navigate({ search: (s) => ({ node: s.node }) })} onOpenNode={openNode} />
@@ -175,8 +182,8 @@ function ClusterPanel({ meta, onOpenNode }: { meta: Meta; onOpenNode: (id: strin
 
   return (
     <Tabs defaultValue="neighbours">
-      <TabsList className="w-full">
-        <TabsTrigger value="neighbours" className="flex-1">Closest neighbours</TabsTrigger>
+      <TabsList className="h-auto w-full flex-wrap">
+        <TabsTrigger value="neighbours" className="flex-1">Neighbours</TabsTrigger>
         <TabsTrigger value="counter" className="flex-1">Counterexamples</TabsTrigger>
       </TabsList>
       <TabsContent value="neighbours" className="mt-4 space-y-3">
@@ -189,16 +196,16 @@ function ClusterPanel({ meta, onOpenNode }: { meta: Meta; onOpenNode: (id: strin
             const genes = p?.shared_genes.map(lab) ?? [];
             const mechs = p?.shared_mechanisms.map((m) => MECH_LABEL[m] ?? m) ?? [];
             return (
-              <li key={id} className="rounded-md border p-3 text-sm">
+              <li key={id} className="border-l-2 border-border py-3 pl-3 text-sm hover:border-primary">
                 <div className="flex items-baseline justify-between gap-2">
-                  <button onClick={() => onOpenNode(id)} className="text-left hover:underline">{lab(id)}</button>
+                  <Button variant="link" onClick={() => onOpenNode(id)} className="text-left hover:underline">{lab(id)}</Button>
                   <span className="shrink-0 text-xs text-muted-foreground">{Math.round(score * 100)}% similar</span>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {genes.length ? `Shared genes: ${genes.join(", ")}. ` : "No shared genes. "}
                   {mechs.length ? `Shared pathway: ${mechs.join(", ")}.` : "No shared pathway."}
                 </p>
-                {p && <button onClick={() => setOpen(p)} className="mt-1 text-xs text-primary hover:underline">Why these are neighbours</button>}
+                {p && <Button variant="link" onClick={() => setOpen(p)} className="mt-1 text-xs text-primary hover:underline">Why these are neighbours</Button>}
               </li>
             );
           })}
@@ -222,10 +229,10 @@ function CounterList({ title, items, lab, onOpen }: { title: string; items: Pair
       <ul className="space-y-2">
         {items.map((p) => (
           <li key={p.a + p.b}>
-            <button onClick={() => onOpen(p)} className="w-full rounded-md border p-3 text-left text-sm hover:border-primary">
+            <Button variant="link" onClick={() => onOpen(p)} className="w-full rounded-md border p-3 text-left text-sm hover:border-primary">
               {lab(p.a)} <span className="text-muted-foreground">and</span> {lab(p.b)}
               <span className="block text-xs text-muted-foreground">{p.shared_terms.length} shared symptoms · {p.shared_mechanisms.length ? "same pathway" : "different pathway"}</span>
-            </button>
+            </Button>
           </li>
         ))}
       </ul>
@@ -300,7 +307,7 @@ function NodeDetail({
         )}
         {p["ambiguous"] && <p className="mt-1 text-xs text-muted-foreground">Name may match several people.</p>}
         {!isCenter && (
-          <button onClick={() => onCenter(node.id)} className="mt-2 text-sm text-primary hover:underline">Put this at the centre</button>
+          <Button variant="link" onClick={() => onCenter(node.id)} className="mt-2 text-sm text-primary hover:underline">Put this at the centre</Button>
         )}
       </div>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
@@ -323,7 +330,7 @@ function NodeDetail({
                 const rel = REL_LABEL[e.type] ?? e.type;
                 return (
                   <li key={e.id}>
-                    <button onClick={() => onEdge(e.id)} className="flex w-full items-start gap-2 rounded px-1 py-1 text-left text-sm hover:bg-muted">
+                    <Button variant="link" onClick={() => onEdge(e.id)} className="flex w-full items-start gap-2 rounded px-1 py-1 text-left text-sm hover:bg-muted">
                       <TierDot tier={e.tier} />
                       <span className="-mt-1 flex-1">
                         {nodes.get(otherId)?.label ?? otherId}
@@ -333,7 +340,7 @@ function NodeDetail({
                           {e.contradicts && e.contradicts.length > 0 && <span className="text-contradict"> · evidence against</span>}
                         </span>
                       </span>
-                    </button>
+                    </Button>
                   </li>
                 );
               })}
