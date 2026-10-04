@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, Network } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { EvBadge, TierBadge } from "./Legend";
 
@@ -7,10 +7,11 @@ export function Header({ children }: { children?: React.ReactNode }) {
   const link = "rounded px-2 py-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring";
   return (
     <header className="border-b">
-      <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
-        <Link to="/" className="font-serif text-xl">Rare Disease Atlas</Link>
+      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
+        <Link to="/" className="flex items-center gap-3 font-serif text-lg"><Network className="h-5 w-5 text-primary" />Rare Disease Atlas</Link>
         <nav className="flex items-center gap-1">
           <Link to="/" className={link} activeOptions={{ exact: true }} activeProps={{ className: "text-foreground font-medium" }}>Search</Link>
+          <Link to="/explore" className={link} activeProps={{ className: "text-foreground font-medium" }}>Connections</Link>
           <Link to="/next-step" className={link} activeProps={{ className: "text-foreground font-medium" }}>Your next step</Link>
           <HowToRead className={link} />
         </nav>

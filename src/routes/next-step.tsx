@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { z } from "zod";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, ArrowUpRight, BookOpen, Mail } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { draftProposal, explainStep } from "@/lib/ai.functions";
 import { Header, Footer } from "@/components/atlas/Header";
@@ -47,7 +47,7 @@ function NextStep() {
   const metaQ = useQuery({ queryKey: ["meta"], queryFn: fetchMeta, staleTime: Infinity });
   const a = metaQ.data?.actions;
   const anchor = a?.anchor ?? metaQ.data?.anchor;
-  const anchorQ = useQuery({ queryKey: ["node", anchor], queryFn: () => fetchNodes([anchor!]), enabled: !!anchor });
+  const anchorQ = useQuery({ queryKey: ["node", anchor], queryFn: () => fetchNodes(anchor ? [anchor] : []), enabled: !!anchor });
   const steps = a?.steps ?? [];
   const allEdgeIds = [...new Set(steps.flatMap((s) => s.edge_ids ?? []))];
   const edgesQ = useQuery({ queryKey: ["step-edges", allEdgeIds.join()], queryFn: () => fetchEdgesByIds(allEdgeIds), enabled: allEdgeIds.length > 0 });
@@ -67,19 +67,21 @@ function NextStep() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+      <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-8 lg:px-9">
         {metaQ.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
         {metaQ.error && <p className="text-sm text-destructive">Could not load your next steps. Please refresh.</p>}
         {a && (
           <>
             <p className="text-xs font-medium uppercase tracking-wide text-primary">Your next step this week</p>
-            <h1 className="mt-1 max-w-3xl text-3xl leading-tight md:text-4xl">
-              For {name}, we found {leads} reusable research {leads === 1 ? "lead" : "leads"} you could ask about.
-            </h1>
+            <h1 className="mt-3 max-w-4xl text-3xl leading-snug md:text-4xl">{name}</h1>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-muted-foreground">For {name}, we found {leads} reusable research {leads === 1 ? "lead" : "leads"} you could ask about.</p>
+              {anchor && <Button variant="outline" onClick={() => navigate({ to: "/explore", search: { node: anchor } })}><ArrowUpRight /> Explore connections</Button>}
+            </div>
             {edgesQ.error && <p className="mt-2 text-sm text-destructive">Could not load confidence for some cards.</p>}
 
-            <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_320px]">
-              <div className="space-y-10">
+            <div className="mt-8 grid gap-8 border-t pt-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+              <div className="min-w-0 space-y-10 lg:col-start-2 lg:row-start-1">
                 {steps.length === 0 && <GapState actions={a} />}
                 {GROUPS.map((g) => {
                   const items = steps.filter(g.match);
@@ -95,7 +97,7 @@ function NextStep() {
                 })}
               </div>
 
-              <aside className="space-y-6 text-sm">
+              <aside className="atlas-context space-y-2 text-sm lg:col-start-1 lg:row-start-1">
                 {a.next_question && (
                   <section className="rounded-md bg-accent p-4 text-accent-foreground">
                     <h3 className="mb-1 text-base">Question to test next</h3>
@@ -134,7 +136,7 @@ function NextStep() {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">{r.diseases.map((d) => dl.get(d) ?? d).join(", ")}</p>
-                        {r.edge_ids[0] && <button onClick={() => openEdge(r.edge_ids[0]!)} className="text-xs text-primary hover:underline">Show the evidence</button>}
+                        {r.edge_ids[0] && <Button variant="link" onClick={() => openEdge(r.edge_ids[0] ?? "")} className="text-xs text-primary hover:underline">Show the evidence</Button>}
                       </li>
                     ))}
                   </ul>
@@ -185,7 +187,7 @@ function StepCard({ step: s, tier, onEvidence }: { step: Step; tier: Tier | null
   };
   const hasExplanation = !!s.explanation?.text;
   return (
-    <article className="rounded-md border p-5">
+    <article className="atlas-lead">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="text-lg leading-snug">{s.title}</h3>
@@ -193,13 +195,15 @@ function StepCard({ step: s, tier, onEvidence }: { step: Step; tier: Tier | null
         </div>
         {tier && <TierBadge tier={tier} />}
       </div>
-      <p className="mt-2 text-sm leading-relaxed">{hasExplanation ? s.explanation!.text : plain?.text || s.why}</p>
+      <p className="mt-2 text-sm leading-relaxed">{hasExplanation ? s.explanation?.text : plain?.text || s.why}</p>
       {!hasExplanation && !plain && (
-        <button onClick={explainIt} disabled={explBusy} className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline">
+        <Button variant="link" onClick={explainIt} disabled={explBusy} className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline">
           {explBusy && <Loader2 className="h-3 w-3 animate-spin" />} Explain in plain words
-        </button>
+        </Button>
       )}
       {plain?.fallback && <p className="mt-1 text-xs text-muted-foreground">This is a plain summary of the stored reason.</p>}
+      <details className="mt-4 border-t pt-4">
+        <summary>What differs & questions to ask</summary>
       {s.differences && s.differences.length > 0 && (
         <div className="mt-3 text-sm">
           <h4 className="font-medium">What differs</h4>
@@ -218,14 +222,15 @@ function StepCard({ step: s, tier, onEvidence }: { step: Step; tier: Tier | null
           </ul>
         </div>
       )}
+      </details>
       <div className="mt-4 flex flex-wrap gap-2">
         {(s.edge_ids ?? []).map((e, i) => (
           <Button key={e} variant="outline" size="sm" onClick={() => onEvidence(e)}>
-            Show the evidence{(s.edge_ids?.length ?? 0) > 1 ? ` ${i + 1}` : ""}
+            <BookOpen /> Show the evidence{(s.edge_ids?.length ?? 0) > 1 ? ` ${i + 1}` : ""}
           </Button>
         ))}
         <Button size="sm" onClick={draftIt} disabled={busy}>
-          {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Draft a message
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail />} Draft a message
         </Button>
       </div>
       {err && <p className="mt-2 text-sm text-destructive">{err}</p>}
@@ -238,7 +243,7 @@ function StepCard({ step: s, tier, onEvidence }: { step: Step; tier: Tier | null
           {cites.length > 0 && (
             <div className="text-xs text-muted-foreground">
               Citations:{" "}
-              {cites.map((c, i) => <button key={c} onClick={() => onEvidence(c)} className="mr-3 text-primary hover:underline">Source {i + 1}</button>)}
+              {cites.map((c, i) => <Button variant="link" key={c} onClick={() => onEvidence(c)} className="mr-3 text-primary hover:underline">Source {i + 1}</Button>)}
             </div>
           )}
           <p className="text-xs text-muted-foreground">Check every claim before sending. This draft is not medical advice.</p>
