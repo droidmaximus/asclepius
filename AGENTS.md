@@ -1,5 +1,5 @@
 ## Asclepius
-- Pages use static reading surfaces without decorative background scenes or motion controls, keeping research content unobstructed.
+- Pages use static reading surfaces with a shared CSS-masked Greek meander at the margins; no animated scenes or motion controls, keeping research content unobstructed.
 - The logo lives in src/assets/asclepius-logo.jpeg and the favicon in public/favicon.png; keep them in sync.
 - App is read-only against Supabase tables nodes/edges/evidence/meta via the browser client; never add tables or writes — data comes from an external pipeline.
 - Data-driven routes (/explore, /next-step) use ssr:false because Cytoscape and on-demand queries are browser-only.
