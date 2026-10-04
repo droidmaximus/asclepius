@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Remove the home-page pillars and portico while preserving the search and emblem.
 - [x] Add a subtle static ancient Greek background motif without obstructing research content.
 - [x] Remove all added animated backgrounds and motion controls; restore static page surfaces.
 - [x] Rename the product Asclepius and use the supplied image as its logo and favicon.
