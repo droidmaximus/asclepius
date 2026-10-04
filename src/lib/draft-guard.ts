@@ -24,6 +24,15 @@ export function unsupportedClinicalTerms(draft: string, facts: string): string[]
     .sort((a, b) => d.indexOf(` ${a} `) - d.indexOf(` ${b} `));
 }
 
+const DIFFERENCE_CLAIM = /\b(?:known|one|key|main|important|notable) difference\b|\bdiffers? (?:in|by|from)\b/i;
+const NEEDS_CHECKING = /\b(?:still )?needs? to (?:be )?check|\bstill (?:needs?|has|have) to be (?:checked|confirmed)|\bnot yet (?:known|checked)/i;
+
+/** True when, with no stored difference, a sentence of `draft` states a difference instead of saying it still needs checking. */
+export function claimsUnstoredDifference(draft: string, hasStoredDifferences: boolean): boolean {
+  if (hasStoredDifferences) return false;
+  return draft.split(/(?<=[.!?])\s+|\n+/).some((s) => DIFFERENCE_CLAIM.test(s) && !NEEDS_CHECKING.test(s));
+}
+
 export type DraftStep = { title?: string; differences?: string[]; review_questions?: string[] };
 
 /** A first message built only from stored step data, used when the model's draft cannot be trusted. */

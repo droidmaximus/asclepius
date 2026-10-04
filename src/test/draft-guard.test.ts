@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { templateDraft, tidyDraft, unsupportedClinicalTerms } from "@/lib/draft-guard";
+import { claimsUnstoredDifference, templateDraft, tidyDraft, unsupportedClinicalTerms } from "@/lib/draft-guard";
 
 const step = {
   title: "Ask SphinCS Lyso Gemeinnutzige UG (Haftungsbeschrankt) about reusing Registry Gangliosidoses",
@@ -56,5 +56,18 @@ describe("Draft guard", () => {
   });
   it("keeps brackets that hold more than connection codes", () => {
     expect(tidyDraft("It fits (mostly E1).")).toBe("It fits (mostly).");
+  });
+  it("flags a difference claim when no difference is stored", () => {
+    const draft = "One known difference is that the study focuses on GM2 gangliosidosis.";
+    expect(claimsUnstoredDifference(draft, false)).toBe(true);
+    expect(claimsUnstoredDifference("Our disease differs from Tay-Sachs in its genes.", false)).toBe(true);
+  });
+  it("allows a difference claim when differences are stored", () => {
+    expect(claimsUnstoredDifference("One known difference is that the study focuses on GM2 gangliosidosis.", true)).toBe(false);
+  });
+  it("allows saying the difference still needs checking", () => {
+    expect(claimsUnstoredDifference("How the diseases differ still needs to be checked with the study team.", false)).toBe(false);
+    expect(claimsUnstoredDifference("The main difference from our disease still needs to be checked.", false)).toBe(false);
+    expect(claimsUnstoredDifference("We are interested in reusing the registry.", false)).toBe(false);
   });
 });

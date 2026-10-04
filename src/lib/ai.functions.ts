@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { templateDraft, tidyDraft, unsupportedClinicalTerms } from "@/lib/draft-guard";
+import { claimsUnstoredDifference, templateDraft, tidyDraft, unsupportedClinicalTerms } from "@/lib/draft-guard";
 
 const DRAFT_PROMPT =
   'You help a rare-disease patient group leader write a short, polite first message to the owner of a registry or study. State only facts from the listed connections and the Known differences; make no other medical or clinical statements (nothing about age of onset, severity, progression or prognosis unless those words appear in the facts). Do not promise a treatment and do not give medical advice. Mention what the sender hopes to reuse, one Known difference (or, if none are listed, say that how the diseases differ still needs to be checked with the study team), and one question for the study team. At most 150 words. Reply as JSON: {"text": string, "cited_edge_ids": [string]}. Cite every edge id whose fact you use.';
@@ -53,7 +53,9 @@ async function run(stepId: string, systemPrompt: string, mode: "draft" | "explai
   }
   const user = [
     `Step: ${step.title ?? ""}`,
-    step.differences?.length ? `Known differences: ${step.differences.join(" ")}` : "",
+    step.differences?.length
+      ? `Known differences: ${step.differences.join(" ")}`
+      : mode === "draft" ? "Known differences: none stored. Say that how the diseases differ still needs to be checked with the study team." : "",
     step.review_questions?.length ? `Questions for experts: ${step.review_questions.join(" ")}` : "",
     `Edge ids you may cite: ${JSON.stringify([...alias.keys()])}`,
     "Facts (one per edge):",
@@ -64,10 +66,13 @@ async function run(stepId: string, systemPrompt: string, mode: "draft" | "explai
 
   const key = process.env["OPENROUTER_API_KEY"];
   const model = process.env["OPENROUTER_MODEL"] || "openai/gpt-oss-120b";
-  if (!key) return fallback("AI is not configured.");
+  const draftFallback = (error?: string): AiResult =>
+    mode === "draft"
+      ? { text: templateDraft(step), cited_edge_ids: [...allowed], fallback: true, ...(error ? { error } : {}) }
+      : fallback(error);
+  if (!key) return draftFallback("AI is not configured.");
 
-  const draftFallback = (): AiResult =>
-    mode === "draft" ? { text: templateDraft(step), cited_edge_ids: [...allowed], fallback: true } : fallback();
+  let retryNote = "";
 
   for (let attempt = 0; attempt < 2; attempt++) {
     let res: Response;
@@ -82,17 +87,17 @@ async function run(stepId: string, systemPrompt: string, mode: "draft" | "explai
           reasoning: { effort: "low", exclude: true },
           messages: [
             { role: "system", content: systemPrompt + " Never write edge ids such as E1 inside text; list them only in cited_edge_ids. Output only that JSON object with exactly the keys text and cited_edge_ids; no analysis or other keys." },
-            { role: "user", content: user },
+            { role: "user", content: user + retryNote },
           ],
         }),
       });
     } catch (e) {
       console.error("openrouter fetch failed", e);
-      return fallback("The AI service could not be reached.");
+      return draftFallback("The AI service could not be reached.");
     }
     if (!res.ok) {
       console.error("openrouter error", res.status, await res.text().catch(() => ""));
-      return fallback(res.status === 429 ? "The AI service is busy. Try again in a minute." : res.status === 402 ? "The AI account is out of credit." : "The AI service returned an error.");
+      return draftFallback(res.status === 429 ? "The AI service is busy. Try again in a minute." : res.status === 402 ? "The AI account is out of credit." : "The AI service returned an error.");
     }
     const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const raw = body.choices?.[0]?.message?.content ?? "";
@@ -111,8 +116,10 @@ async function run(stepId: string, systemPrompt: string, mode: "draft" | "explai
       return draftFallback();
     }
     const unsupported = unsupportedClinicalTerms(text, user);
+    if (mode === "draft" && claimsUnstoredDifference(text, !!step.differences?.length)) unsupported.push("invented difference");
     if (unsupported.length === 0) return { text, cited_edge_ids: [...new Set(cited)], fallback: false };
     console.warn("ai output used clinical terms not in the facts", { stepId, unsupported, attempt });
+    retryNote = `\nYour previous draft used statements not in the facts (${unsupported.join(", ")}). Remove them.`;
   }
   return draftFallback();
 }
