@@ -31,7 +31,7 @@ import {
   type Pair,
 } from "@/lib/atlas";
 
-const TITLE = "Explore connections — Rare Disease Atlas";
+const TITLE = "Explore connections — Asclepius";
 const DESC = "See how a rare disease connects to genes, symptoms, studies, patient groups and researchers, with the source behind every link.";
 
 export const Route = createFileRoute("/explore")({

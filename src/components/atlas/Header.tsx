@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { HelpCircle, Network } from "lucide-react";
+import { HelpCircle } from "lucide-react";
+import logoAsset from "@/assets/asclepius-logo.jpeg.asset.json";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { EvBadge, TierBadge } from "./Legend";
 
@@ -8,7 +9,7 @@ export function Header({ children }: { children?: React.ReactNode }) {
   return (
     <header className="border-b">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
-        <Link to="/" className="flex items-center gap-3 font-serif text-lg"><Network className="h-5 w-5 text-primary" />Rare Disease Atlas</Link>
+        <Link to="/" className="flex shrink-0 items-center gap-3 font-serif text-lg"><img src={logoAsset.url} alt="" className="h-12 w-12 shrink-0 object-contain" />Asclepius</Link>
         <nav className="flex items-center gap-1">
           <Link to="/" className={link} activeOptions={{ exact: true }} activeProps={{ className: "text-foreground font-medium" }}>Search</Link>
           <Link to="/explore" className={link} activeProps={{ className: "text-foreground font-medium" }}>Connections</Link>

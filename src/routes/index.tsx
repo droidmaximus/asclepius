@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Search } from "@/components/atlas/Search";
 import { Header, Footer } from "@/components/atlas/Header";
 
-const TITLE = "Rare Disease Atlas — find studies, groups and next steps";
+const TITLE = "Asclepius — find studies, groups and next steps";
 const DESC =
   "Search a rare disease, gene, symptom or patient group and see connected studies, reusable research and people, with a source for every claim.";
 
@@ -33,7 +33,7 @@ function Home() {
       <Header />
       <main className="flex flex-1 items-center justify-center px-4">
         <div className="w-full max-w-2xl text-center">
-          <h1 className="text-4xl md:text-5xl">Rare Disease Atlas</h1>
+          <h1 className="text-4xl md:text-5xl">Asclepius</h1>
           <p className="mx-auto mt-3 max-w-md text-muted-foreground">
             Find the studies, research and people connected to a rare disease, and a next step you can take this week.
           </p>
