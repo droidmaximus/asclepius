@@ -45,7 +45,6 @@ export function Graph({
     (async () => {
       const cytoscape = (await import("cytoscape")).default;
       if (cancelled || !ref.current) return;
-      cyRef.current?.destroy();
       const c = {
         fg: cssVar("--foreground"),
         bg: cssVar("--background"),
@@ -58,6 +57,7 @@ export function Graph({
       for (const [t, v] of Object.entries(TYPE_TOKEN)) typeColor[t] = cssVar(v);
       const previous = cyRef.current;
       const positions = new Map(previous?.nodes().map((n) => [n.id(), n.position()] as const) ?? []);
+      previous?.destroy();
       const cy = cytoscape({
         container: ref.current,
         elements: [
