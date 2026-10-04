@@ -1,5 +1,6 @@
 ## Asclepius
 - Shared decorative research backgrounds are client-lazy React Three Fiber scenes mounted once in the root; CSS token colours, non-blocking input, pause/reduced-motion support and scroll transforms preserve all read-only research flows.
+- Animated background transforms are owned by the frame loop after one-time initialisation; bounded inputs, decaying pulses and viewport-relative scale prevent jumps and off-screen drift.
 - The logo lives in src/assets/asclepius-logo.jpeg and the favicon in public/favicon.png; keep them in sync.
 - App is read-only against Supabase tables nodes/edges/evidence/meta via the browser client; never add tables or writes — data comes from an external pipeline.
 - Data-driven routes (/explore, /next-step) use ssr:false because Cytoscape and on-demand queries are browser-only.
