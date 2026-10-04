@@ -145,6 +145,7 @@ export async function fetchNodes(ids: string[]): Promise<AtlasNode[]> {
 }
 
 export const MAX_NODES = 60;
+export const INITIAL_NODES = 12;
 export const EXPAND_LIMIT = 12;
 const tierRank: Record<string, number> = { high: 0, medium: 1, low: 2 };
 const strongestFirst = (x: AtlasEdge, y: AtlasEdge) =>
@@ -183,17 +184,29 @@ export async function fetchNeighborhood(id: string, showWeak: boolean): Promise<
     if (error) throw error;
     frontier = [];
     for (const e of data as AtlasEdge[]) {
+      if (!seen.has(e.target_id) && seen.size >= INITIAL_NODES) continue;
       if (!picked.some((p) => p.id === e.id)) picked.push(e);
       if (!seen.has(e.target_id)) { seen.add(e.target_id); frontier.push(e.target_id); level[e.target_id] = 1; }
     }
   }
   const visible = direct.filter((e) => showWeak || e.tier !== "low").sort(strongestFirst);
+  // Balance relation types so symptoms/papers cannot consume the first view.
+  // Confidence still orders the candidates within each relation type.
+  const buckets = new Map<string, AtlasEdge[]>();
+  for (const e of visible) buckets.set(e.type, [...(buckets.get(e.type) ?? []), e]);
+  const balanced: AtlasEdge[] = [];
+  while ([...buckets.values()].some((items) => items.length)) {
+    for (const items of buckets.values()) {
+      const next = items.shift();
+      if (next) balanced.push(next);
+    }
+  }
   const hiddenWeak = showWeak ? 0 : direct.length - visible.length;
   let hiddenOver = 0;
-  for (const e of visible) {
+  for (const e of balanced) {
     if (picked.some((p) => p.id === e.id)) continue;
     const other = e.source_id === id ? e.target_id : e.source_id;
-    if (!(other in level) && Object.keys(level).length >= MAX_NODES) { hiddenOver++; continue; }
+    if (!(other in level) && Object.keys(level).length >= INITIAL_NODES) { hiddenOver++; continue; }
     level[other] ??= 1;
     picked.push(e);
   }
@@ -228,7 +241,9 @@ export async function expandNode(g: GraphData, id: string, showWeak: boolean): P
     newEdges.push(e);
   }
   const nodes = await fetchNodes(newIds);
-  return { ...g, nodes: [...g.nodes, ...nodes], edges: [...g.edges, ...newEdges], level, added: newEdges.length };
+  const known = new Set([...g.nodes, ...nodes].map((n) => n.id));
+  const validEdges = newEdges.filter((e) => known.has(e.source_id) && known.has(e.target_id));
+  return { ...g, nodes: [...g.nodes, ...nodes], edges: [...g.edges, ...validEdges], level, hiddenOver: id === Object.keys(g.level).find((k) => g.level[k] === 0) ? cand.length - validEdges.length : g.hiddenOver, added: validEdges.length };
 }
 
 export async function fetchEdgesByIds(ids: string[]): Promise<AtlasEdge[]> {
