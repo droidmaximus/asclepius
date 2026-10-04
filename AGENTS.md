@@ -19,3 +19,4 @@
 - AI drafting/explaining runs in TanStack server functions (src/lib/ai.functions.ts), not Supabase Edge Functions; output is rejected (fallback to the step's `why`) unless every cited edge id belongs to the step.
 
 - Atlas presentation uses a two-column context rail and map/content surface; preserve source-backed content and existing read-only flows when changing layout.
+- Evidence displays share source citation helpers and quote rendering; load both edge-linked and explicitly referenced evidence, preserve stored wording, and distinguish summaries and connected records from quotations so missing evidence is never implied to exist.
