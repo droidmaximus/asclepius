@@ -151,7 +151,7 @@
 .atlas-page:not(.atlas-search-page) > main { background: color-mix(in oklch, var(--background) 84%, transparent); }
 .atlas-search-page main { min-height: 580px; }
 .research-motion-control { position: fixed; right: 16px; bottom: 68px; z-index: 20; background: var(--background); color: var(--muted-foreground); width: 32px; height: 32px; }
-@media (max-width: 640px) { .research-background.is-search { opacity: 0.38; } .atlas-search-page main { min-height: 480px; } }
+@media (max-width: 640px) { .research-background.is-search { opacity: 0.38; mask-image: linear-gradient(to right, var(--background), transparent 32%, transparent 68%, var(--background)); } .atlas-search-page main { min-height: 480px; } }
 .atlas-workspace { width: 100%; max-width: 1440px; margin: 0 auto; display: grid; grid-template-columns: 300px minmax(0, 1fr); }
 .atlas-workspace.is-collapsed { grid-template-columns: 64px minmax(0, 1fr); }
 .atlas-context { border-right: 1px solid var(--border); padding: 24px; min-width: 0; }

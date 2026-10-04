@@ -7,9 +7,9 @@ import type { BackgroundInput } from "./ResearchScene";
 const ResearchScene = lazy(() => import("./ResearchScene"));
 
 class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
+  override state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
-  render() { return this.state.failed ? null : this.props.children; }
+  override render() { return this.state.failed ? null : this.props.children; }
 }
 
 // CSS resolves oklch tokens before Three receives its supported RGB values.
