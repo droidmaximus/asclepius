@@ -5,12 +5,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { EvBadge, TierBadge } from "./Legend";
 
 export function Header({ children }: { children?: React.ReactNode }) {
-  const link = "rounded px-2 py-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring";
+  const link = "whitespace-nowrap rounded px-2 py-1 max-sm:px-1.5 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring";
   return (
     <header className="border-b">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
         <Link to="/" className="flex shrink-0 items-center gap-3 font-serif text-lg"><img src={logo} alt="" className="h-12 w-12 shrink-0 object-contain" />Asclepius</Link>
-        <nav className="flex items-center gap-1">
+        <nav className="flex max-w-full items-center gap-1 max-sm:gap-0 max-sm:overflow-x-auto max-sm:py-0.5 max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden">
           <Link to="/" className={link} activeOptions={{ exact: true }} activeProps={{ className: "text-foreground font-medium" }}>Search</Link>
           <Link to="/explore" className={link} activeProps={{ className: "text-foreground font-medium" }}>Connections</Link>
           <Link to="/next-step" className={link} activeProps={{ className: "text-foreground font-medium" }}>Your next step</Link>
@@ -35,7 +35,7 @@ function HowToRead({ className }: { className: string }) {
   return (
     <Dialog>
       <DialogTrigger className={`${className} inline-flex items-center gap-1`}>
-        <HelpCircle className="h-4 w-4" /> How to read this
+        <HelpCircle className="h-4 w-4 shrink-0" /> <span className="max-sm:sr-only">How to read this</span>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>

@@ -34,6 +34,8 @@ const SEGMENT_CLASS: Record<Basis, string> = {
   assumption: "bg-muted-foreground/30",
 };
 
+const WEEKS_PER_MONTH = 4.3;
+
 const times = (x: number) => `${x < 10 ? x.toFixed(1) : Math.round(x)}×`;
 const weeks = (min: number, max: number) => (min === max ? `${max} wk` : `${min}–${max} wk`);
 const mid = (s: RouteStep) => (s.minWeeks + s.maxWeeks) / 2;
@@ -89,6 +91,7 @@ function Impact() {
   const s = speedup(routes);
   const usual = routeWeeks(routes.usual);
   const scale = Math.max(...[routes.usual, routes.asclepius].map((r) => r.reduce((t, x) => t + mid(x), 0)));
+  const tenInside = s.low <= 10 && 10 <= s.high;
   const markerAt = Math.min(Math.max((Math.log(10) - Math.log(s.low)) / (Math.log(s.high) - Math.log(s.low)), 0), 1);
 
   return (
@@ -100,14 +103,15 @@ function Impact() {
         <p className="mt-4 max-w-3xl text-muted-foreground">
           {IMPACT.context.text} (
           <a href={IMPACT.context.href} target="_blank" rel="noreferrer" className="text-primary underline-offset-2 hover:underline">{IMPACT.context.source}</a>
-          ). A group that starts its own registry waits {Math.round(usual.min / 4.3)}–{Math.round(usual.max / 4.3)} months before the first family is enrolled. Asclepius found an existing registry that already names the disease.
+          ). By our estimate below (mostly labelled assumptions), a group that starts its own registry waits <span className="whitespace-nowrap">about {Math.round(usual.min / WEEKS_PER_MONTH)}–{Math.round(usual.max / WEEKS_PER_MONTH)} months</span> before the first family is enrolled. Asclepius found an existing registry that already names the disease.
         </p>
 
         <section className="mt-8 rounded-md bg-accent p-5 text-accent-foreground" aria-label="Speed-up">
           <p className="text-sm">Estimated speed-up to the milestone</p>
           <p className="mt-1 font-serif text-4xl">{times(s.low)} to {times(s.high)}</p>
           <p className="mt-1 text-sm">About {times(s.mid)} at the middle of both ranges. Calculated from the weeks below, not chosen.</p>
-          <div className="relative mt-5 h-2 rounded-full bg-background/70">
+          <p className="sr-only">{tenInside ? "The 10× target falls inside this range." : "The 10× target falls outside this range."}</p>
+          <div className="relative mt-5 h-2 rounded-full bg-background/70" aria-hidden="true">
             <div className="absolute -top-1.5 h-5 w-0.5 bg-primary" style={{ left: `${markerAt * 100}%` }} />
             <span className="absolute top-4 -translate-x-1/2 text-xs font-medium" style={{ left: `${markerAt * 100}%` }}>10×</span>
           </div>
