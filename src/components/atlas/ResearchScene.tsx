@@ -6,27 +6,34 @@ import { CatmullRomCurve3, Group, MathUtils, Vector3 } from "three";
 export type BackgroundInput = { x: number; y: number; scroll: number; pulse: number };
 type SceneProps = { mode: string; paused: boolean; input: RefObject<BackgroundInput>; colors: { ink: string; faint: string; paper: string } };
 
-function Strand({ phase, color }: { phase: number; color: string }) {
+// A stylised emblem, rather than an anatomical animal: one serpent, one
+// unwinged staff. The single coil must not read as a double DNA helix.
+function AsclepiusRod({ colors }: Pick<SceneProps, "colors">) {
   const curve = useMemo(() => new CatmullRomCurve3(Array.from({ length: 97 }, (_, i) => {
-    const y = (i / 96 - 0.5) * 14;
-    const angle = i / 96 * Math.PI * 5 + phase;
-    return new Vector3(Math.cos(angle) * 1.1, y, Math.sin(angle) * 1.1);
-  })), [phase]);
-  return <mesh><tubeGeometry args={[curve, 160, 0.035, 6, false]} /><meshStandardMaterial color={color} roughness={0.55} metalness={0.15} /></mesh>;
-}
-
-function Helix({ colors }: Pick<SceneProps, "colors">) {
+    const t = i / 96;
+    const angle = t * Math.PI * 6;
+    const radius = 0.52 + Math.max(0, (t - 0.9) / 0.1) * 0.5;
+    return new Vector3(Math.cos(angle) * radius, (t - 0.5) * 10.8, Math.sin(angle) * radius);
+  })), []);
   return <>
-    <Strand phase={0} color={colors.ink} />
-    <Strand phase={Math.PI} color={colors.faint} />
-    {Array.from({ length: 27 }, (_, i) => {
-      const y = (i / 26 - 0.5) * 14;
-      const angle = i / 26 * Math.PI * 5;
-      return <mesh key={i} position={[0, y, 0]} rotation={[0, -angle, Math.PI / 2]}>
-        <cylinderGeometry args={[0.018, 0.018, 2.2, 5]} />
-        <meshStandardMaterial color={i % 3 === 0 ? colors.ink : colors.faint} roughness={0.85} />
-      </mesh>;
-    })}
+    <mesh>
+      <capsuleGeometry args={[0.12, 12.6, 6, 12]} />
+      <meshStandardMaterial color={colors.faint} roughness={0.9} metalness={0.05} />
+    </mesh>
+    <mesh>
+      <tubeGeometry args={[curve, 192, 0.105, 10, false]} />
+      <meshStandardMaterial color={colors.ink} roughness={0.6} metalness={0.18} />
+    </mesh>
+    <group position={[1.02, 5.4, 0]} rotation={[0, 0, -0.18]}>
+      <mesh scale={[0.32, 0.14, 0.19]}>
+        <sphereGeometry args={[1, 16, 12]} />
+        <meshStandardMaterial color={colors.ink} roughness={0.6} metalness={0.18} />
+      </mesh>
+      <mesh position={[0.12, 0.06, 0.16]}>
+        <sphereGeometry args={[0.027, 8, 6]} />
+        <meshStandardMaterial color={colors.paper} roughness={0.9} />
+      </mesh>
+    </group>
   </>;
 }
 
@@ -80,13 +87,12 @@ function ResearchForms({ mode, paused, input, colors }: SceneProps) {
       group.scale.setScalar(MathUtils.lerp(group.scale.x, scale, smooth));
     });
   });
-  const network = mode === "/explore" || mode === "/next-step";
   return <>
     <group ref={left}>
-      {network ? <Pathways colors={colors} /> : <Helix colors={colors} />}
+      <AsclepiusRod colors={colors} />
     </group>
     <group ref={right}>
-      {mode === "/" || mode === "/next-step" ? <Helix colors={colors} /> : <Pathways colors={colors} />}
+      <Pathways colors={colors} />
     </group>
   </>;
 }
