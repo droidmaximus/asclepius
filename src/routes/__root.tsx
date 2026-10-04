@@ -9,7 +9,6 @@ import {
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { ResearchBackground } from "@/components/atlas/ResearchBackground";
 
 import appCss from "../styles.css?url";
 
@@ -112,7 +111,6 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <ResearchBackground />
       <Outlet />
     </QueryClientProvider>
   );
