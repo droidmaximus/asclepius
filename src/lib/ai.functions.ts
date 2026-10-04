@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { templateDraft, tidyDraft, unsupportedClinicalTerms } from "@/lib/draft-guard";
 
 const DRAFT_PROMPT =
-  'You help a rare-disease patient group leader write a short, polite first message to the owner of a registry or study. Use only the facts given. Do not promise a treatment and do not give medical advice. Mention what the sender hopes to reuse, one honest difference between the diseases, and one question for the study team. At most 150 words. Reply as JSON: {"text": string, "cited_edge_ids": [string]}. Cite every edge id whose fact you use.';
+  'You help a rare-disease patient group leader write a short, polite first message to the owner of a registry or study. State only facts from the listed connections and the Known differences; make no other medical or clinical statements (nothing about age of onset, severity, progression or prognosis unless those words appear in the facts). Do not promise a treatment and do not give medical advice. Mention what the sender hopes to reuse, one Known difference (or, if none are listed, say that how the diseases differ still needs to be checked with the study team), and one question for the study team. At most 150 words. Reply as JSON: {"text": string, "cited_edge_ids": [string]}. Cite every edge id whose fact you use.';
 const EXPLAIN_PROMPT =
   'You explain one suggested next step to a parent who leads a rare-disease patient group and has no medical training. Use plain words, at most 90 words. Use only the facts given. Do not promise a treatment. Reply as JSON: {"text": string, "cited_edge_ids": [string]}. Cite every edge id whose fact you use.';
 
@@ -16,7 +17,8 @@ export interface AiResult {
 type Step = { id: string; title?: string; why?: string; edge_ids?: string[]; differences?: string[]; review_questions?: string[] };
 type Edge = { id: string; source_id: string; target_id: string; type: string; source: string; evidence_type: string; confidence: number; tier: string };
 
-async function run(stepId: string, systemPrompt: string, withQuotes: boolean): Promise<AiResult> {
+async function run(stepId: string, systemPrompt: string, mode: "draft" | "explain"): Promise<AiResult> {
+  const withQuotes = mode === "draft";
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabaseAdmin as any;
@@ -64,55 +66,63 @@ async function run(stepId: string, systemPrompt: string, withQuotes: boolean): P
   const model = process.env["OPENROUTER_MODEL"] || "openai/gpt-oss-120b";
   if (!key) return fallback("AI is not configured.");
 
-  let res: Response;
-  try {
-    res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Title": "Asclepius" },
-      body: JSON.stringify({
-        model,
-        temperature: 0,
-        response_format: { type: "json_object" },
-        reasoning: { effort: "low", exclude: true },
-        messages: [
-          { role: "system", content: systemPrompt + " Output only that JSON object with exactly the keys text and cited_edge_ids; no analysis or other keys." },
-          { role: "user", content: user },
-        ],
-      }),
-    });
-  } catch (e) {
-    console.error("openrouter fetch failed", e);
-    return fallback("The AI service could not be reached.");
+  const draftFallback = (): AiResult =>
+    mode === "draft" ? { text: templateDraft(step), cited_edge_ids: [...allowed], fallback: true } : fallback();
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Title": "Asclepius" },
+        body: JSON.stringify({
+          model,
+          temperature: 0,
+          response_format: { type: "json_object" },
+          reasoning: { effort: "low", exclude: true },
+          messages: [
+            { role: "system", content: systemPrompt + " Never write edge ids such as E1 inside text; list them only in cited_edge_ids. Output only that JSON object with exactly the keys text and cited_edge_ids; no analysis or other keys." },
+            { role: "user", content: user },
+          ],
+        }),
+      });
+    } catch (e) {
+      console.error("openrouter fetch failed", e);
+      return fallback("The AI service could not be reached.");
+    }
+    if (!res.ok) {
+      console.error("openrouter error", res.status, await res.text().catch(() => ""));
+      return fallback(res.status === 429 ? "The AI service is busy. Try again in a minute." : res.status === 402 ? "The AI account is out of credit." : "The AI service returned an error.");
+    }
+    const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const raw = body.choices?.[0]?.message?.content ?? "";
+    let parsed: { text?: unknown; cited_edge_ids?: unknown };
+    try {
+      parsed = JSON.parse(raw.replace(/^```(json)?|```$/g, "").trim());
+    } catch {
+      console.warn("ai output not json", { stepId, raw: raw.slice(0, 500) });
+      return draftFallback();
+    }
+    const text = typeof parsed.text === "string" ? tidyDraft(parsed.text) : "";
+    const cited = (Array.isArray(parsed.cited_edge_ids) ? parsed.cited_edge_ids : [])
+      .map((x) => (typeof x === "string" ? alias.get(x.trim()) ?? x.trim() : ""));
+    if (!text || cited.length === 0 || !cited.every((c) => allowed.has(c))) {
+      console.warn("ai output rejected", { stepId, raw: raw.slice(0, 500) });
+      return draftFallback();
+    }
+    const unsupported = unsupportedClinicalTerms(text, user);
+    if (unsupported.length === 0) return { text, cited_edge_ids: [...new Set(cited)], fallback: false };
+    console.warn("ai output used clinical terms not in the facts", { stepId, unsupported, attempt });
   }
-  if (!res.ok) {
-    console.error("openrouter error", res.status, await res.text().catch(() => ""));
-    return fallback(res.status === 429 ? "The AI service is busy. Try again in a minute." : res.status === 402 ? "The AI account is out of credit." : "The AI service returned an error.");
-  }
-  const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-  const raw = body.choices?.[0]?.message?.content ?? "";
-  let parsed: { text?: unknown; cited_edge_ids?: unknown };
-  try {
-    parsed = JSON.parse(raw.replace(/^```(json)?|```$/g, "").trim());
-  } catch {
-    console.warn("ai output not json", { stepId, raw: raw.slice(0, 500) });
-    return fallback();
-  }
-  const text = typeof parsed.text === "string" ? parsed.text.trim() : "";
-  const cited = (Array.isArray(parsed.cited_edge_ids) ? parsed.cited_edge_ids : [])
-    .map((x) => (typeof x === "string" ? alias.get(x.trim()) ?? x.trim() : ""));
-  if (!text || cited.length === 0 || !cited.every((c) => allowed.has(c))) {
-    console.warn("ai output rejected", { stepId, raw: raw.slice(0, 500) });
-    return fallback();
-  }
-  return { text, cited_edge_ids: [...new Set(cited)], fallback: false };
+  return draftFallback();
 }
 
 const input = (d: unknown) => z.object({ step_id: z.string().min(1).max(300) }).parse(d);
 
 export const draftProposal = createServerFn({ method: "POST" })
   .inputValidator(input)
-  .handler(({ data }) => run(data.step_id, DRAFT_PROMPT, true));
+  .handler(({ data }) => run(data.step_id, DRAFT_PROMPT, "draft"));
 
 export const explainStep = createServerFn({ method: "POST" })
   .inputValidator(input)
-  .handler(({ data }) => run(data.step_id, EXPLAIN_PROMPT, false));
+  .handler(({ data }) => run(data.step_id, EXPLAIN_PROMPT, "explain"));

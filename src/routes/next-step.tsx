@@ -270,7 +270,7 @@ function StepCard({ step: s, tier, onEvidence, edges, sourceData, sourceError }:
       {draft !== null && (
         <div className="mt-4 space-y-2">
           {isFallback && (
-            <p className="text-xs text-muted-foreground">We could not write a checked draft, so this is a plain summary of why this step was suggested.</p>
+            <p className="text-xs text-muted-foreground">We could not write a checked draft, so this message uses only the facts stored for this step.</p>
           )}
           <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={8} aria-label="Draft message" />
           {cites.length > 0 && (
