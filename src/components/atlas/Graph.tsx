@@ -64,11 +64,11 @@ export function Graph({
           ...nodes.map((n) => ({
             data: {
               id: n.id,
-              label: n.label,
+              label: n.label.length > 65 ? `${n.label.slice(0, 62)}…` : n.label,
               color: typeColor[n.type] ?? c.fg,
               center: n.id === centerId ? 1 : 0,
             },
-            position: positions.get(n.id),
+            position: positions.get(n.id) ?? { x: 0, y: 0 },
           })),
           ...edges.map((e) => ({
             data: {
@@ -126,7 +126,7 @@ export function Graph({
           padding: 36,
           animate: false,
         } as never,
-        minZoom: 0.3,
+        minZoom: 0.05,
         maxZoom: 3,
         wheelSensitivity: 0.2,
       });
@@ -152,6 +152,18 @@ export function Graph({
   }, [selectedEdgeId, edges]);
 
   useEffect(() => () => cyRef.current?.destroy(), []);
+  useEffect(() => {
+    const container = ref.current;
+    if (!container) return;
+    const observer = new ResizeObserver(() => {
+      const cy = cyRef.current;
+      if (!cy) return;
+      cy.resize();
+      cy.fit(undefined, 36);
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   const zoom = (factor: number) => {
     const cy = cyRef.current;
