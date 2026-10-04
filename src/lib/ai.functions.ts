@@ -71,7 +71,12 @@ async function post(provider: string, url: string, headers: Record<string, strin
     console.error(`${provider} error`, res.status, await res.text().catch(() => ""));
     return { ok: false, status: res.status };
   }
-  return { ok: true, raw: read(await res.json()) };
+  try {
+    return { ok: true, raw: read(await res.json()) };
+  } catch (e) {
+    console.error(`${provider} response not json`, e);
+    return { ok: false, status: res.status };
+  }
 }
 
 async function run(stepId: string, systemPrompt: string, mode: "draft" | "explain"): Promise<AiResult> {

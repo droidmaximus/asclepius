@@ -118,7 +118,7 @@ One milestone: Maria's group starts collecting natural-history data. The page co
 |---|---|---|
 | **Extract** | Reads PubMed abstracts and patient-group pages into claims and groups; each kept only if its quote is verbatim in the source | `openai/gpt-4.1-mini` via OpenRouter (default); the published bundle was built with Claude Haiku 4.5, recorded in `meta.llm` |
 | **Reconcile** | Resolves names the model reads (for example "GM2 activator protein deficiency") to one stable MONDO, HGNC or HPO node | `openai/gpt-4.1-mini` via OpenRouter (default); the published bundle was built with Claude Haiku 4.5, recorded in `meta.llm` |
-| **Explain** | Writes plain-language next steps and the "Draft a message" email, citing only connections attached to that step; drafts with clinical claims, or differences, not backed by the atlas are rejected | `openai/gpt-oss-120b` via OpenRouter on the live site; Claude Haiku 4.5 when only `ANTHROPIC_API_KEY` is set (local testing) |
+| **Explain** | Writes plain-language next steps and the "Draft a message" email, citing only connections attached to that step; drafts with clinical claims, or differences, not backed by the atlas are rejected | Stored explanations for the top steps come from the pipeline model (Claude Haiku 4.5 in the published bundle); on-demand explanations and drafts use `openai/gpt-oss-120b` via OpenRouter on the live site, or Claude Haiku 4.5 when only `ANTHROPIC_API_KEY` is set |
 
 ## Architecture
 
