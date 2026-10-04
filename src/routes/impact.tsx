@@ -95,7 +95,7 @@ function Impact() {
   const markerAt = Math.min(Math.max((Math.log(10) - Math.log(s.low)) / (Math.log(s.high) - Math.log(s.low)), 0), 1);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="atlas-page flex min-h-screen flex-col">
       <Header />
       <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-8 lg:px-9">
         <p className="text-xs font-medium uppercase tracking-wide text-primary">The 10× case</p>

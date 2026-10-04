@@ -101,7 +101,7 @@ function Explore() {
   const detailNode = (selected && nodeMap.get(selected)) || center;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="atlas-page flex min-h-screen flex-col">
       <Header><Search onPick={openNode} /></Header>
 
       <main className={`atlas-workspace flex-1 ${contextOpen ? "" : "is-collapsed"}`}>

@@ -78,7 +78,7 @@ function NextStep() {
   const openEdge = (id: string) => navigate({ search: { edge: id } });
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="atlas-page flex min-h-screen flex-col">
       <Header />
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-8 lg:px-9">
         {metaQ.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}

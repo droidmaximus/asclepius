@@ -99,6 +99,8 @@
   --border: oklch(0.943822 0.007476 197.030);
   --input: oklch(0.9 0.005 220);
   --ring: oklch(0.542335 0.090711 198.762);
+  --research-ink: oklch(0.64 0.065 198.762);
+  --research-faint: oklch(0.82 0.025 198.762);
   --tier-high: oklch(0.48 0.11 195);
   --tier-medium: oklch(0.72 0.07 195);
   --tier-low: oklch(0.8 0.005 240);
@@ -142,6 +144,14 @@
 }
 
 /* Atlas workspace: a quiet reading surface with a persistent context rail. */
+.research-background { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.4; overflow: hidden; }
+.research-background.is-search { opacity: 0.65; }
+.atlas-page { position: relative; z-index: 1; }
+.atlas-page > header, .atlas-page > footer { background: color-mix(in oklch, var(--background) 94%, transparent); }
+.atlas-page:not(.atlas-search-page) > main { background: color-mix(in oklch, var(--background) 84%, transparent); }
+.atlas-search-page main { min-height: 580px; }
+.research-motion-control { position: fixed; right: 16px; bottom: 68px; z-index: 20; background: var(--background); color: var(--muted-foreground); width: 32px; height: 32px; }
+@media (max-width: 640px) { .research-background.is-search { opacity: 0.38; } .atlas-search-page main { min-height: 480px; } }
 .atlas-workspace { width: 100%; max-width: 1440px; margin: 0 auto; display: grid; grid-template-columns: 300px minmax(0, 1fr); }
 .atlas-workspace.is-collapsed { grid-template-columns: 64px minmax(0, 1fr); }
 .atlas-context { border-right: 1px solid var(--border); padding: 24px; min-width: 0; }

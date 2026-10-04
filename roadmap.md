@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Add topic-relevant scroll-reactive 3D backgrounds to every page and a pointer-reactive search background; verify readability and existing flows.
 - [x] Rename the product Asclepius and use the supplied image as its logo and favicon.
 - [x] Home: centred search with example chips, type-filtered search, synonym matches, states
 - [x] Neighbourhood graph: family via subtype_of, type colours, tier edges, expand on click (12), weak toggle, cluster neighbours panel, pair details, counterexamples tab
