@@ -29,7 +29,7 @@ function Home() {
   const [preset, setPreset] = useState<string | undefined>();
   const open = (id: string) => navigate({ to: "/explore", search: { node: id } });
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="atlas-page atlas-search-page flex min-h-screen flex-col">
       <Header />
       <main className="flex flex-1 items-center justify-center px-4">
         <div className="w-full max-w-2xl text-center">
