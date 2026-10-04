@@ -1,19 +1,26 @@
 // Clinical words a draft may use only when the facts given to the model already contain them.
 // "age" and "treatment" are left out: review questions say "age range", and the prompt forbids promising a treatment.
 const CLINICAL_TERMS = [
-  "onset", "infant", "infants", "infantile", "juvenile", "adult", "adults", "child", "children", "aged",
-  "severe", "severity", "mild", "progression", "progressive", "prognosis", "lifespan", "life expectancy",
-  "fatal", "cure", "cures", "therapy",
+  "onset", "infant", "infants", "infantile", "infancy", "neonatal", "newborn", "newborns", "toddler", "toddlers",
+  "juvenile", "adult", "adults", "adulthood", "child", "children", "childhood", "aged", "years old",
+  "severe", "severity", "mild", "milder", "progression", "progressive", "progresses", "worsens", "deteriorates",
+  "regression", "symptoms", "prognosis", "lifespan", "life expectancy",
+  "fatal", "lethal", "death", "die", "dies", "died", "survive", "survives", "survival",
+  "cure", "cures", "cured", "curative", "therapy", "therapies", "treatments",
 ];
+
+const AGE_PHRASE = /\b(?:aged? \d+|\d+ years)\b/g;
 
 const words = (text: string) => ` ${text.toLowerCase().replace(/[^a-z0-9]+/g, " ")} `;
 
-/** Clinical terms in `draft` that do not appear in `facts`, in the order they occur in the draft. */
+/** Clinical terms and age phrases in `draft` that do not appear in `facts`, in the order they occur in the draft. */
 export function unsupportedClinicalTerms(draft: string, facts: string): string[] {
   const d = words(draft);
   const f = words(facts);
-  return CLINICAL_TERMS
-    .filter((t) => d.includes(` ${t} `) && !f.includes(` ${t} `))
+  const ages = [...new Set(d.match(AGE_PHRASE) ?? [])];
+  const found = [...CLINICAL_TERMS, ...ages].filter((t) => d.includes(` ${t} `) && !f.includes(` ${t} `));
+  return found
+    .filter((t) => !found.some((u) => u.startsWith(`${t} `) && d.indexOf(` ${u} `) === d.indexOf(` ${t} `)))
     .sort((a, b) => d.indexOf(` ${a} `) - d.indexOf(` ${b} `));
 }
 
@@ -39,13 +46,18 @@ export function templateDraft(step: DraftStep): string {
     .join("\n\n");
 }
 
+const onlyEdgeCodes = (inner: string) =>
+  /\bE\d+\b/i.test(inner) && inner.replace(/\b(?:see|edges?|and|E\d+)\b|[\s,:\-–]/gi, "") === "";
+
 /** Real line breaks instead of escaped "\n", and no internal connection codes such as "(see edges E1, E2)". */
 export function tidyDraft(text: string): string {
   return text
     .replace(/\\n/g, "\n")
-    .replace(/\s*\((?:see\s+)?(?:edges?\s+)?E\d+(?:\s*(?:,|and)\s*E\d+)*\)/gi, "")
+    .replace(/[ \t]*(?:\(([^()]*)\)|\[([^[\]]*)\])/g, (group, round?: string, square?: string) =>
+      onlyEdgeCodes(round ?? square ?? "") ? "" : group)
     .replace(/[ \t]*\bE\d+\b[ \t]*/g, " ")
-    .replace(/ +([.,;:])/g, "$1")
+    .replace(/[ \t]+([.,;:)\]])/g, "$1")
     .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]*\n[ \t]*/g, "\n")
     .trim();
 }

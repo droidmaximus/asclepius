@@ -12,6 +12,17 @@ describe("Draft guard", () => {
     const draft = "Tay-Sachs primarily affects infants, whereas GM2 gangliosidosis has adult onset.";
     expect(unsupportedClinicalTerms(draft, "Registry Gangliosidoses --reusable_for--> Tay-Sachs disease AB variant")).toEqual(["infants", "adult", "onset"]);
   });
+  it("flags survival, death and cure wording in their inflected forms", () => {
+    const draft = "Tay-Sachs is usually lethal in early childhood; patients rarely survive past age 4 and no therapies have cured it.";
+    const terms = unsupportedClinicalTerms(draft, "Registry Gangliosidoses --reusable_for--> Tay-Sachs disease AB variant");
+    expect(terms).toEqual(expect.arrayContaining(["lethal", "childhood", "cured", "age 4"]));
+  });
+  it("allows an age phrase that the facts contain", () => {
+    expect(unsupportedClinicalTerms("Do you enrol from age 4?", "Inclusion: age 4 and over")).toEqual([]);
+  });
+  it("flags age phrases the facts do not contain", () => {
+    expect(unsupportedClinicalTerms("Most are aged 2 and live 10 years.", "age 4")).toEqual(["aged 2", "10 years"]);
+  });
   it("passes clinical words that appear in the facts, ignoring case", () => {
     expect(unsupportedClinicalTerms("Is the infantile form included?", "Phenotype: Infantile onset")).toEqual([]);
   });
@@ -33,5 +44,17 @@ describe("Draft guard", () => {
   it("turns escaped line breaks into real ones and drops internal connection codes", () => {
     const raw = "Dear team,\\n\\nThe registry is listed for both diseases (see edges E1, E2). It covers E3 too.\\nThanks";
     expect(tidyDraft(raw)).toBe("Dear team,\n\nThe registry is listed for both diseases. It covers too.\nThanks");
+  });
+  it.each(["(see edges E1, E2, and E3)", "(Edges: E1, E2)", "[E1, E2]", "(E1-E3)", "(see edge E4)"])(
+    "drops the bracketed connection codes %s completely",
+    (codes) => {
+      expect(tidyDraft(`It fits ${codes}.`)).toBe("It fits.");
+    },
+  );
+  it("leaves no stray spaces at line edges after dropping codes", () => {
+    expect(tidyDraft("Hi,\\nE1 covers it. \\nThanks")).toBe("Hi,\ncovers it.\nThanks");
+  });
+  it("keeps brackets that hold more than connection codes", () => {
+    expect(tidyDraft("It fits (mostly E1).")).toBe("It fits (mostly).");
   });
 });
