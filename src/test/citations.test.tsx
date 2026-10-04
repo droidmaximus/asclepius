@@ -27,10 +27,25 @@ describe("Evidence citations", () => {
   });
   it("does not invent a quotation or imply an exhaustive contradiction search", () => {
     const html = renderToStaticMarkup(<SourceEvidence edge={edge} evidence={[]} nodes={new Map()} />);
-    expect(html).toContain("No supporting quotation is supplied");
-    expect(html).toContain("scored suggestion, not a quoted finding");
+    expect(html).toContain("Confidence score: 80%");
+    expect(html).toContain("not a quoted finding or a chance of treatment success");
+    expect(html).not.toContain("No supporting quotation is supplied");
     expect(html).toContain("This does not mean none exist");
     expect(html).not.toContain("<blockquote");
     expect(recordSources(edge, new Map())).toEqual([]);
+  });
+  it("shows confidence for an entry without quoted wording while preserving its citation", () => {
+    const html = renderToStaticMarkup(<SourceEvidence edge={edge} evidence={[{ ...evidence, quote: " " }]} nodes={new Map()} />);
+    expect(html).toContain("Confidence score: 80%");
+    expect(html).toContain(evidence.url);
+    expect(html).not.toContain("<blockquote");
+    expect(html).not.toContain("No quoted passage supplied");
+  });
+  it("keeps actual quotations and does not invent missing scores", () => {
+    const quoted = renderToStaticMarkup(<SourceEvidence edge={edge} evidence={[evidence]} nodes={new Map()} />);
+    expect(quoted).toContain(evidence.quote);
+    expect(quoted).not.toContain("Confidence score:");
+    const missing = renderToStaticMarkup(<SourceEvidence edge={{ ...edge, confidence: null }} evidence={[]} nodes={new Map()} />);
+    expect(missing).toContain("Confidence score: Not recorded");
   });
 });
