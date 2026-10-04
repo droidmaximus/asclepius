@@ -1,16 +1,5 @@
-<!-- LOVABLE:BEGIN -->
-> [!IMPORTANT]
-> This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
-> published git history — force pushing, or rebasing/amending/squashing commits
-> that are already pushed — as it rewrites history on Lovable's side and the
-> user will likely lose their project history.
->
-> Commits you push to the connected branch sync back to Lovable and show up in
-> the editor, so keep the branch in a working state.
-<!-- LOVABLE:END -->
-
 ## Asclepius
-- Serve uploaded branding through a CDN asset pointer and derive a small local favicon from the same image so branding stays consistent without shipping large binaries.
+- The logo lives in src/assets/asclepius-logo.jpeg and the favicon in public/favicon.png; keep them in sync.
 - App is read-only against Supabase tables nodes/edges/evidence/meta via the browser client; never add tables or writes — data comes from an external pipeline.
 - Data-driven routes (/explore, /next-step) use ssr:false because Cytoscape and on-demand queries are browser-only.
 - Graph colours come from CSS tokens resolved to rgb at runtime (Cytoscape cannot parse oklch); keep colours in src/styles.css.

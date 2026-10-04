@@ -16,7 +16,6 @@ Built for the **Hack-Nation × OpenAI × Buffalo Initiative** challenge "AI Atla
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_4-0F172A?logo=tailwindcss&logoColor=38BDF8)
 ![Cytoscape.js](https://img.shields.io/badge/Cytoscape.js-F7DF1E?logoColor=black)
 ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white)
-![Built with Lovable](https://img.shields.io/badge/Built_with-Lovable-FF5C8A)
 
 <img src="docs/screenshots/connections-map.png" alt="Connections map for Tay-Sachs disease AB variant" width="900" />
 
@@ -131,7 +130,6 @@ This repository is the **web app**. It reads the graph from Supabase with the pu
 | Graph | Cytoscape.js with a label-aware layout |
 | Data | Supabase (Postgres, public read-only access) |
 | AI drafting | TanStack server functions calling OpenRouter (default model `openai/gpt-oss-120b`) |
-| Built with | [Lovable](https://lovable.dev) |
 
 ## Run it locally
 
