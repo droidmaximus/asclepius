@@ -69,7 +69,11 @@ async function run(stepId: string, systemPrompt: string, withQuotes: boolean): P
         model,
         temperature: 0,
         response_format: { type: "json_object" },
-        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: user }],
+        reasoning: { effort: "low", exclude: true },
+        messages: [
+          { role: "system", content: systemPrompt + " Output only that JSON object with exactly the keys text and cited_edge_ids; no analysis or other keys." },
+          { role: "user", content: user },
+        ],
       }),
     });
   } catch (e) {
