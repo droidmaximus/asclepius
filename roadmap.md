@@ -8,3 +8,4 @@
 
 - [x] Apply PDF-informed map/sidebar design, progressive lead details, and verify search → connections → evidence → next step.
 - [x] Reduce initial graph crowding, improve label spacing, and verify more-connections and zoom controls.
+- [x] Keep initial map labels readable and prevent expansion or resize from automatically zooming out.
